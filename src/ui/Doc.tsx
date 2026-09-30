@@ -1,5 +1,10 @@
+"use client";
+
+import { motion } from "motion/react";
+import { useRef } from "react";
 import type { Evidence, Lang } from "@/game/types";
 import { delay } from "./motion";
+import { play } from "./sound";
 import { strings } from "./strings";
 
 /** Deterministic slight tilt so the pile looks handled, not generated. */
@@ -23,28 +28,69 @@ export function PaperClip({ className = "" }: { className?: string }) {
   );
 }
 
-/** One slip in the evidence pile. */
+/** A point on the page, as Motion reports drag positions. */
+export interface PagePoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * One slip in the evidence pile. It is dealt onto the desk, opens on click,
+ * and can be dragged onto the folder to put it in front of the suspect.
+ */
 export function DocSlip({
   evidence,
   lang,
   fresh,
   dealDelay,
+  draggable,
   onOpen,
+  onDragMove,
+  onDrop,
 }: {
   evidence: Evidence;
   lang: Lang;
   fresh: boolean;
   /** When this slip lands on the desk, in ms; slips are dealt one after another. */
   dealDelay: number;
-  onOpen: () => void;
+  draggable: boolean;
+  onOpen: (from: DOMRect) => void;
+  /** Null when the drag ends. */
+  onDragMove: (at: PagePoint | null) => void;
+  onDrop: (at: PagePoint) => void;
 }) {
   const t = strings[lang];
   const tilt = tiltFor(evidence.id);
+  // A drag ends with a click on the same button; that click must not open the document.
+  const dragged = useRef(false);
   return (
-    <button
-      onClick={onOpen}
-      style={{ "--tilt": `${tilt}deg`, "--delay": `${dealDelay}ms`, transform: `rotate(${tilt}deg)` } as React.CSSProperties}
-      className="sheet anim-deal group relative flex w-full cursor-pointer items-start gap-3 px-3 py-2.5 text-left transition-[translate] hover:-translate-y-0.5"
+    <motion.button
+      onClick={(e) => {
+        if (dragged.current) {
+          dragged.current = false;
+          return;
+        }
+        onOpen(e.currentTarget.getBoundingClientRect());
+      }}
+      drag={draggable}
+      dragSnapToOrigin
+      dragElastic={1}
+      onDragStart={() => {
+        dragged.current = true;
+        play("paper");
+      }}
+      onDrag={(_, info) => onDragMove(info.point)}
+      onDragEnd={(_, info) => {
+        onDragMove(null);
+        onDrop(info.point);
+        // Released away from the slip, the browser sends no click; clear the flag after any click would have run.
+        window.setTimeout(() => (dragged.current = false), 0);
+      }}
+      initial={{ opacity: 0, x: -70, y: -40, rotate: tilt - 12 }}
+      animate={{ opacity: 1, x: 0, y: 0, rotate: tilt, transition: { duration: 0.46, ease: [0.2, 0.8, 0.3, 1], delay: dealDelay / 1000 } }}
+      whileHover={{ y: -2 }}
+      whileDrag={{ scale: 1.06, rotate: tilt + 4, zIndex: 40, boxShadow: "0 22px 34px -12px rgba(0,0,0,0.65)", cursor: "grabbing" }}
+      className={`sheet group relative flex w-full cursor-pointer items-start gap-3 px-3 py-2.5 text-left ${draggable ? "touch-none" : ""}`}
     >
       {evidence.kind === "photos" && <span className="mt-0.5 size-8 shrink-0 border-[3px] border-white bg-[#3a3632] shadow-sm" />}
       <span className="min-w-0 flex-1">
@@ -59,7 +105,7 @@ export function DocSlip({
         <span className="block text-sm leading-snug group-hover:text-stamp">{evidence.title[lang]}</span>
       </span>
       {fresh && <PaperClip className="absolute -top-3 right-5 h-10 w-4" />}
-    </button>
+    </motion.button>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { play } from "./sound";
 
 const CHARS_PER_TICK = 2;
 const TICK_MS = 16;
@@ -20,14 +21,17 @@ export function Typewriter({ text, animate }: { text: string; animate: boolean }
       setShown(text.length);
       return;
     }
+    let n = 0;
+    let tick = 0;
     const id = window.setInterval(() => {
-      setShown((n) => {
-        if (n >= text.length) {
-          window.clearInterval(id);
-          return n;
-        }
-        return n + CHARS_PER_TICK;
-      });
+      n = Math.min(text.length, n + CHARS_PER_TICK);
+      setShown(n);
+      // A key sound every few characters reads as typing; one per character is a buzz.
+      if (tick++ % 3 === 0 && text.slice(n - CHARS_PER_TICK, n).trim()) play("key");
+      if (n >= text.length) {
+        window.clearInterval(id);
+        play("bell");
+      }
     }, TICK_MS);
     return () => window.clearInterval(id);
   }, [text, animate]);

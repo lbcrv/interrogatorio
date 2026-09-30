@@ -50,6 +50,8 @@ export const strings = {
     kind: { report: "Documento", program: "Impreso", statement: "Declaración", photos: "Fotografías", messages: "Mensajes" },
     contactSheet: "Hoja de contactos",
     accuseRecord: "Acta de acusación",
+    sound: { on: "Sonido: sí", off: "Sonido: no" },
+    dropHint: (name: string) => `Suéltela aquí para mostrársela a ${name}`,
   },
   en: {
     fileNo: "Case file",
@@ -100,6 +102,8 @@ export const strings = {
     kind: { report: "Document", program: "Printed program", statement: "Statement", photos: "Photographs", messages: "Messages" },
     contactSheet: "Contact sheet",
     accuseRecord: "Accusation record",
+    sound: { on: "Sound: on", off: "Sound: off" },
+    dropHint: (name: string) => `Drop it here to show ${name}`,
   },
 } as const satisfies Record<Lang, unknown>;
 

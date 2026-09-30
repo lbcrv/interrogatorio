@@ -5,6 +5,7 @@ import { santaRita as c } from "@/content/santa-rita";
 import type { Lang, Suspect, TurnInput } from "@/game/types";
 import type { PlayedTurn } from "./Game";
 import { clockAt, strings } from "./strings";
+import { Mark } from "./Mark";
 import { delay } from "./motion";
 import { Typewriter, typingMs } from "./Typewriter";
 
@@ -58,7 +59,18 @@ export function Transcript({
               {p.text}
             </Line>
             <Line time="" who={tag} strong>
-              <Typewriter text={p.reply} animate={p.index === freshIndex} />
+              {/* The answer where the story broke gets bracketed in the margin, once it has been typed out. */}
+              <Mark
+                type="bracket"
+                show={p.fired !== null}
+                animate={p.index === freshIndex}
+                delayMs={p.index === freshIndex ? typingMs(p.reply) + 300 : 0}
+                padding={3}
+                padY={-4}
+                block
+              >
+                <Typewriter text={p.reply} animate={p.index === freshIndex} />
+              </Mark>
             </Line>
             {p.fired?.unlocks && (
               <Line time="" who="">

@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { santaRita as c } from "@/content/santa-rita";
 import type { Evidence, Lang } from "@/game/types";
+import { Mark } from "./Mark";
 import { afterMotion } from "./motion";
+import { play } from "./sound";
 import { strings } from "./strings";
 
 export function Accusation({
@@ -37,6 +39,7 @@ export function Accusation({
           if (!who || pressing) return;
           // The stamp comes down on the form first, then the verdict.
           setPressing(true);
+          play("thud");
           afterMotion(260, () => onAccuse(who, cited));
         }}
       >
@@ -54,9 +57,15 @@ export function Accusation({
           <div className="divide-y divide-rule border-y border-rule">
             {c.suspects.map((s) => (
               <label key={s.id} className="flex cursor-pointer items-baseline gap-3 py-2">
-                <input type="radio" name="who" checked={who === s.id} onChange={() => setWho(s.id)} className="xbox rounded-full" />
+                <input type="radio" name="who" checked={who === s.id} onChange={() => {
+                    setWho(s.id);
+                    play("pen");
+                  }} className="xbox rounded-full" />
                 <span>
-                  {s.name} <span className="text-sm text-ink-soft">· {s.role[lang]}</span>
+                  <Mark type="circle" show={who === s.id} padding={5}>
+                    {s.name}
+                  </Mark>{" "}
+                  <span className="text-sm text-ink-soft">· {s.role[lang]}</span>
                 </span>
               </label>
             ))}

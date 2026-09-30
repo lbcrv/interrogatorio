@@ -388,7 +388,10 @@ body {
   }
 }
 
-:focus-visible {
-  outline: 2px solid var(--stamp);
-  outline-offset: 2px;
+/* In the base layer so a utility can opt out, like the transcript line that shows a red caret instead. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--stamp);
+    outline-offset: 2px;
+  }
 }

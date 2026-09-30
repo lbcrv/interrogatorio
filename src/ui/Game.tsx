@@ -1,16 +1,21 @@
 "use client";
 
+import { MotionConfig } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { santaRita as c } from "@/content/santa-rita";
 import { applyTurn, availableEvidence, evaluateAccusation, initialState, questionsLeft, validateTurn } from "@/game/engine";
 import type { Evidence, GameState, Lang, Suspect, Turn, TurnInput, UnlockRule } from "@/game/types";
 import { Accusation } from "./Accusation";
-import { DocSlip, PaperClip } from "./Doc";
+import { DocSlip, PaperClip, type PagePoint } from "./Doc";
 import { EvidenceSheet } from "./EvidenceSheet";
 import { Fingerprint } from "./Fingerprint";
+import { Mark } from "./Mark";
 import { afterMotion, delay } from "./motion";
+import { play, playAt } from "./sound";
+import { SoundToggle } from "./SoundToggle";
 import { clockAt, strings } from "./strings";
 import { Line, Transcript } from "./Transcript";
+import { typingMs } from "./Typewriter";
 import { EMPTY, useSavedGame } from "./useSavedGame";
 
 export interface PlayedTurn extends Turn {
@@ -27,6 +32,11 @@ export function Game() {
   const [pending, setPending] = useState<TurnInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reading, setReading] = useState<string | null>(null);
+  const [readingFrom, setReadingFrom] = useState<DOMRect | null>(null);
+  // Null while nothing is being dragged; otherwise whether the slip is over the folder.
+  const [dragOver, setDragOver] = useState<boolean | null>(null);
+  // Dragging evidence needs a mouse; on touch screens it would fight scrolling.
+  const [canDrag, setCanDrag] = useState(false);
   const [accusing, setAccusing] = useState(false);
   const [freshIndex, setFreshIndex] = useState<number | null>(null);
   // Only matters on small screens; on desktop the list is always shown.
@@ -34,6 +44,14 @@ export function Game() {
   // The evidence is dealt onto the desk one slip at a time when the file opens; later slips land at once.
   const [dealt, setDealt] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
+    const sync = () => setCanDrag(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!started) return;
@@ -96,6 +114,10 @@ export function Game() {
         setError(e === "closed" || e === "busy" || e === "limit" ? t.errors[e] : t.errors.generic);
         return;
       }
+      // Marker sounds line up with the notes that write themselves on the file.
+      const { fired } = applyTurn(c, state, next);
+      if (fired && !c.rules.some((r) => r.suspectId === next.suspectId && state.admissions.includes(r.id))) playAt("pen", 700);
+      if (fired?.unlocks) playAt("pen", typingMs(data.reply) + 150);
       setFreshIndex(game.turns.length);
       setGame((g) => ({ ...g, turns: [...g.turns, { ...next, reply: data.reply! }] }));
       setDraft("");
@@ -111,6 +133,21 @@ export function Game() {
   useEffect(() => {
     if (!pending) inputRef.current?.focus({ preventScroll: true });
   }, [pending]);
+
+  /** Whether a page point is over the open folder, where evidence is put in front of the suspect. */
+  function overFolder(at: PagePoint): boolean {
+    return document
+      .elementsFromPoint(at.x - window.scrollX, at.y - window.scrollY)
+      .some((el) => (el as HTMLElement).dataset.drop === "folder");
+  }
+
+  function dropEvidence(id: string, at: PagePoint) {
+    if (!overFolder(at) || left <= 0 || pending) return;
+    play("slap");
+    markSeen(id);
+    setPresenting(id);
+    inputRef.current?.focus({ preventScroll: true });
+  }
 
   function markSeen(id: string) {
     if (!game.seen.includes(id)) setGame((g) => ({ ...g, seen: [...g.seen, id] }));
@@ -146,6 +183,7 @@ export function Game() {
   const changedStory = c.rules.some((r) => r.suspectId === suspect.id && state.admissions.includes(r.id));
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 bg-desk shadow-[0_10px_20px_-12px_rgba(0,0,0,0.6)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
@@ -155,9 +193,12 @@ export function Game() {
             </span>
             <h1 className="on-desk mt-1.5 truncate text-lg leading-tight font-semibold">{c.title[lang]}</h1>
           </div>
-          <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="label on-desk cursor-pointer underline-offset-4 hover:underline max-sm:order-first max-sm:basis-full max-sm:text-right">
-            {t.lang}
-          </button>
+          <div className="flex gap-4 max-sm:order-first max-sm:basis-full max-sm:justify-end">
+            <SoundToggle lang={lang} className="on-desk" />
+            <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="label on-desk cursor-pointer underline-offset-4 hover:underline">
+              {t.lang}
+            </button>
+          </div>
           <div className="sheet flex items-center gap-4 px-4 py-2 max-sm:basis-full max-sm:justify-between">
             <div>
               <div className="label">{t.clock}</div>
@@ -196,10 +237,15 @@ export function Game() {
                   lang={lang}
                   fresh={unseen.includes(e.id)}
                   dealDelay={dealt ? 0 : 250 + i * 110}
-                  onOpen={() => {
+                  draggable={canDrag && left > 0 && !pending}
+                  onOpen={(from) => {
+                    play("paper");
                     setReading(e.id);
+                    setReadingFrom(from);
                     markSeen(e.id);
                   }}
+                  onDragMove={(at) => setDragOver(at ? overFolder(at) : null)}
+                  onDrop={(at) => dropEvidence(e.id, at)}
                 />
               </li>
             ))}
@@ -211,12 +257,23 @@ export function Game() {
             lang={lang}
             active={suspect.id}
             onPick={(id) => {
+              if (id !== suspect.id) play("paper");
               setSuspectId(id);
               // A reply only types out once; coming back to a tab shows it finished.
               setFreshIndex(null);
             }}
           />
-          <main className="manila relative p-3 sm:p-5">
+          <main
+            data-drop="folder"
+            className={`manila relative p-3 transition-[outline-color] sm:p-5 ${
+              dragOver === null ? "outline-transparent" : dragOver ? "outline-2 outline-offset-4 outline-stamp outline-dashed" : "outline-2 outline-offset-4 outline-ink/30 outline-dashed"
+            }`}
+          >
+            {dragOver !== null && (
+              <span className="hand pointer-events-none absolute -top-9 right-4 z-10 -rotate-2 text-xl text-paper! drop-shadow">
+                {t.dropHint(suspect.name)}
+              </span>
+            )}
             {/* Keyed by suspect so a new card and record are laid down when the tab changes. */}
             <IndexCard key={`card-${suspect.id}`} suspect={suspect} lang={lang} statements={suspectTurns.length} changedStory={changedStory} />
 
@@ -314,6 +371,7 @@ export function Game() {
         <EvidenceSheet
           lang={lang}
           evidence={readingEvidence}
+          from={readingFrom}
           presentLabel={left > 0 ? t.presentTo(suspect.name) : null}
           closeLabel={t.close}
           onPresent={() => {
@@ -329,6 +387,7 @@ export function Game() {
         <Accusation lang={lang} evidence={evidence} onAccuse={accuse} onCancel={left > 0 ? () => setAccusing(false) : null} />
       )}
     </div>
+    </MotionConfig>
   );
 }
 
@@ -345,7 +404,11 @@ function Tally({ total, left, label, note }: { total: number; left: number; labe
     <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={total} aria-valuenow={left} aria-valuetext={note}>
       <div className="label flex justify-between gap-3">
         <span>{label}</span>
-        <span className={`whitespace-nowrap ${left <= 5 ? "text-stamp" : ""}`}>{note}</span>
+        <span className={`whitespace-nowrap ${left <= 5 ? "text-stamp" : ""}`}>
+          <Mark type="circle" show={left <= 5} padding={3}>
+            {note}
+          </Mark>
+        </span>
       </div>
       <div className="mt-1 grid grid-cols-12 gap-0.75">
         {Array.from({ length: total }, (_, i) => (
@@ -505,6 +568,7 @@ function Briefing({
   function open(then: () => void) {
     if (opening) return;
     setOpening(true);
+    play("paper");
     afterMotion(600, then);
   }
 
@@ -517,7 +581,10 @@ function Briefing({
               {t.fileNo} 0522-SR
             </span>
           </div>
-          <LangToggle lang={lang} onLang={onLang} className="on-desk mb-2" />
+          <div className="mb-2 flex gap-4">
+            <SoundToggle lang={lang} className="on-desk" />
+            <LangToggle lang={lang} onLang={onLang} className="on-desk" />
+          </div>
         </div>
 
         <article className="manila relative px-5 pt-7 pb-8 sm:px-10 sm:pt-9">
@@ -582,6 +649,7 @@ function Ending({
   const paragraphs = c.epilogues[verdict][lang].split("\n\n");
   // Sheet lands, stamp comes down at STAMP_MS, the desk jolts as it hits, then the epilogue.
   const STAMP_MS = 300;
+  useEffect(() => playAt("thud", STAMP_MS + 200), []);
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="anim-thud w-full max-w-xl" style={delay(STAMP_MS + 230)}>
