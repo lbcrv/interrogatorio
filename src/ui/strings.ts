@@ -52,6 +52,38 @@ export const strings = {
     accuseRecord: "Acta de acusación",
     sound: { on: "Sonido: sí", off: "Sonido: no" },
     dropHint: (name: string) => `Suéltela aquí para mostrársela a ${name}`,
+    memo: {
+      title: "Memorándum",
+      fields: [
+        ["Para", "El detective asignado"],
+        ["De", "Fiscalía Regional"],
+        ["Fecha", "22 de mayo, 7:38 a. m."],
+        ["Asunto", "Robo de la corona de Santa Rita. Cómo proceder."],
+      ],
+      points: [
+        {
+          head: "Interrogue.",
+          body: "Elija a una persona en las pestañas del fólder y pregúntele lo que quiera, con sus palabras. Cada pregunta toma tres minutos. Tiene 24 antes de que salga la procesión.",
+        },
+        { head: "No les crea.", body: "Los tres ocultan algo. Compare lo que dicen con las pruebas." },
+      ],
+      evidence: {
+        head: "Ponga las pruebas sobre la mesa.",
+        drag: "Arrastre una prueba al fólder, o use «Mostrar prueba».",
+        pick: "Use «Mostrar prueba» debajo de su pregunta.",
+        effect: "La prueba correcta frente a la persona correcta rompe su versión, y a veces aparecen pruebas nuevas.",
+      },
+      last: {
+        head: "Acuse con pruebas.",
+        before: "Cuando esté seguro, presione ACUSAR, señale a quien se llevó la corona y cite hasta tres pruebas. Tiene que demostrar ",
+        key: "el medio, el motivo y la oportunidad",
+        after: ". Una sospecha no basta.",
+      },
+      signed: "El Fiscal Regional",
+      ok: "Enterado",
+      stamp: "Enterado",
+      reopen: "Instrucciones",
+    },
   },
   en: {
     fileNo: "Case file",
@@ -104,6 +136,38 @@ export const strings = {
     accuseRecord: "Accusation record",
     sound: { on: "Sound: on", off: "Sound: off" },
     dropHint: (name: string) => `Drop it here to show ${name}`,
+    memo: {
+      title: "Memorandum",
+      fields: [
+        ["To", "The assigned detective"],
+        ["From", "Regional Prosecutor's Office"],
+        ["Date", "May 22, 7:38 a.m."],
+        ["Subject", "Theft of the Santa Rita crown. How to proceed."],
+      ],
+      points: [
+        {
+          head: "Question them.",
+          body: "Pick a person from the folder tabs and ask whatever you want, in your own words. Each question takes three minutes. You have 24 before the procession leaves.",
+        },
+        { head: "Don't believe them.", body: "All three are hiding something. Check what they say against the evidence." },
+      ],
+      evidence: {
+        head: "Put the evidence on the table.",
+        drag: "Drag a document onto the folder, or use “Show evidence.”",
+        pick: "Use “Show evidence” under your question.",
+        effect: "The right document in front of the right person breaks their story, and sometimes new evidence turns up.",
+      },
+      last: {
+        head: "Accuse with proof.",
+        before: "When you're sure, press ACCUSE, name who took the crown and cite up to three pieces of evidence. You have to prove ",
+        key: "means, motive and opportunity",
+        after: ". A hunch is not enough.",
+      },
+      signed: "Regional Prosecutor",
+      ok: "Understood",
+      stamp: "Noted",
+      reopen: "Instructions",
+    },
   },
 } as const satisfies Record<Lang, unknown>;
 

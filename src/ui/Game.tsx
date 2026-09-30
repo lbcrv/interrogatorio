@@ -10,6 +10,7 @@ import { DocSlip, PaperClip, type PagePoint } from "./Doc";
 import { EvidenceSheet } from "./EvidenceSheet";
 import { Fingerprint } from "./Fingerprint";
 import { Mark } from "./Mark";
+import { Memo, memoRead } from "./Memo";
 import { afterMotion, delay } from "./motion";
 import { play, playAt } from "./sound";
 import { SoundToggle } from "./SoundToggle";
@@ -37,6 +38,9 @@ export function Game() {
   const [dragOver, setDragOver] = useState<boolean | null>(null);
   // Dragging evidence needs a mouse; on touch screens it would fight scrolling.
   const [canDrag, setCanDrag] = useState(false);
+  // The prosecutor's memo: a page before the first case file, then a dialog from the header.
+  const [memoPage, setMemoPage] = useState(false);
+  const [memoDialog, setMemoDialog] = useState(false);
   const [accusing, setAccusing] = useState(false);
   const [freshIndex, setFreshIndex] = useState<number | null>(null);
   // Only matters on small screens; on desktop the list is always shown.
@@ -54,10 +58,10 @@ export function Game() {
   }, []);
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || memoPage) return;
     const id = window.setTimeout(() => setDealt(true), 1500);
     return () => window.clearTimeout(id);
-  }, [started]);
+  }, [started, memoPage]);
 
   const lang = game.lang;
   const t = strings[lang];
@@ -91,6 +95,12 @@ export function Game() {
     setPresenting(null);
     setError(null);
     setAccusing(false);
+    enterFile();
+  }
+
+  /** Opens the file, with the prosecutor's memo in front of it until this browser has read it once. */
+  function enterFile() {
+    if (!memoRead()) setMemoPage(true);
     setStarted(true);
   }
 
@@ -171,11 +181,13 @@ export function Game() {
         lang={lang}
         onLang={setLang}
         canResume={hadSave}
-        onStart={() => (hadSave ? restart() : setStarted(true))}
+        onStart={() => (hadSave ? restart() : enterFile())}
         onResume={() => setStarted(true)}
       />
     );
   }
+
+  if (memoPage) return <Memo lang={lang} mode="page" canDrag={canDrag} onDone={() => setMemoPage(false)} />;
 
   const readingEvidence = reading ? c.evidence.find((e) => e.id === reading) ?? null : null;
   const presentingEvidence = presenting ? c.evidence.find((e) => e.id === presenting) ?? null : null;
@@ -194,6 +206,15 @@ export function Game() {
             <h1 className="on-desk mt-1.5 truncate text-lg leading-tight font-semibold">{c.title[lang]}</h1>
           </div>
           <div className="flex gap-4 max-sm:order-first max-sm:basis-full max-sm:justify-end">
+            <button
+              onClick={() => {
+                play("paper");
+                setMemoDialog(true);
+              }}
+              className="label on-desk cursor-pointer underline-offset-4 hover:underline"
+            >
+              {t.memo.reopen}
+            </button>
             <SoundToggle lang={lang} className="on-desk" />
             <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="label on-desk cursor-pointer underline-offset-4 hover:underline">
               {t.lang}
@@ -382,6 +403,8 @@ export function Game() {
           onClose={() => setReading(null)}
         />
       )}
+
+      {memoDialog && <Memo lang={lang} mode="dialog" canDrag={canDrag} onDone={() => setMemoDialog(false)} />}
 
       {(accusing || left <= 0) && !game.ending && (
         <Accusation lang={lang} evidence={evidence} onAccuse={accuse} onCancel={left > 0 ? () => setAccusing(false) : null} />
