@@ -40,7 +40,8 @@ function ridges(seed: string): string[] {
   return paths;
 }
 
-export function Fingerprint({ seed, className = "" }: { seed: string; className?: string }) {
+/** `inked` draws the ridges from the core outward, like a finger rolled onto the card. */
+export function Fingerprint({ seed, inked = false, className = "" }: { seed: string; inked?: boolean; className?: string }) {
   const id = `fp-${seed.replace(/\W/g, "")}`;
   return (
     <svg viewBox="0 0 50 60" className={className} aria-hidden="true">
@@ -49,9 +50,17 @@ export function Fingerprint({ seed, className = "" }: { seed: string; className?
           <ellipse cx="25" cy="30" rx="19" ry="25" />
         </clipPath>
       </defs>
-      <g clipPath={`url(#${id})`} fill="none" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" opacity="0.72">
+      <g
+        clipPath={`url(#${id})`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        strokeLinecap="round"
+        opacity="0.72"
+        className={inked ? "anim-ink" : undefined}
+      >
         {ridges(seed).map((d, i) => (
-          <path key={i} d={d} />
+          <path key={i} d={d} pathLength={1} style={inked ? { animationDelay: `${250 + i * 45}ms` } : undefined} />
         ))}
       </g>
     </svg>

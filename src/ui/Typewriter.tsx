@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+const CHARS_PER_TICK = 2;
+const TICK_MS = 16;
+
+/** How long a reply takes to type out, so other marks on the page can wait for it. */
+export function typingMs(text: string): number {
+  return Math.ceil(text.length / CHARS_PER_TICK) * TICK_MS;
+}
+
 /** Types out a fresh reply like a transcript being keyed in. Skipped for older lines and for reduced motion. */
 export function Typewriter({ text, animate }: { text: string; animate: boolean }) {
   const [shown, setShown] = useState(animate ? 0 : text.length);
@@ -18,9 +26,9 @@ export function Typewriter({ text, animate }: { text: string; animate: boolean }
           window.clearInterval(id);
           return n;
         }
-        return n + 2;
+        return n + CHARS_PER_TICK;
       });
-    }, 16);
+    }, TICK_MS);
     return () => window.clearInterval(id);
   }, [text, animate]);
 

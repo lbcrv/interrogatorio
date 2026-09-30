@@ -32,15 +32,15 @@ export function EvidenceSheet({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/55 p-4"
+      className="anim-backdrop fixed inset-0 z-30 flex items-center justify-center bg-black/55 p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="evidence-title"
     >
       <article
-        className={`${lined ? "lined pl-16 sm:pl-[4.25rem]" : "sheet px-6 sm:px-9"} slide-in relative max-h-[88vh] w-full max-w-xl overflow-y-auto py-7 pr-6 shadow-2xl sm:pr-9`}
-        style={{ "--tilt": `${tiltFor(evidence.id) / 2}deg` } as React.CSSProperties}
+        className={`${lined ? "lined pl-16 sm:pl-[4.25rem]" : "sheet px-6 sm:px-9"} anim-lift relative max-h-[88vh] w-full max-w-xl overflow-y-auto py-7 pr-6 shadow-2xl sm:pr-9`}
+        style={{ "--tilt": `${tiltFor(evidence.id) / 2}deg`, transform: `rotate(${tiltFor(evidence.id) / 2}deg)` } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
         <PaperClip className="absolute -top-3 right-8 h-12 w-5" />

@@ -1,4 +1,5 @@
 import type { Evidence, Lang } from "@/game/types";
+import { delay } from "./motion";
 import { strings } from "./strings";
 
 /** Deterministic slight tilt so the pile looks handled, not generated. */
@@ -27,27 +28,33 @@ export function DocSlip({
   evidence,
   lang,
   fresh,
+  dealDelay,
   onOpen,
 }: {
   evidence: Evidence;
   lang: Lang;
   fresh: boolean;
+  /** When this slip lands on the desk, in ms; slips are dealt one after another. */
+  dealDelay: number;
   onOpen: () => void;
 }) {
   const t = strings[lang];
+  const tilt = tiltFor(evidence.id);
   return (
     <button
       onClick={onOpen}
-      style={{ "--tilt": `${tiltFor(evidence.id)}deg`, transform: `rotate(${tiltFor(evidence.id)}deg)` } as React.CSSProperties}
-      className={`sheet group relative flex w-full cursor-pointer items-start gap-3 px-3 py-2.5 text-left transition-transform hover:-translate-y-0.5 ${
-        fresh ? "slide-in" : ""
-      }`}
+      style={{ "--tilt": `${tilt}deg`, "--delay": `${dealDelay}ms`, transform: `rotate(${tilt}deg)` } as React.CSSProperties}
+      className="sheet anim-deal group relative flex w-full cursor-pointer items-start gap-3 px-3 py-2.5 text-left transition-[translate] hover:-translate-y-0.5"
     >
       {evidence.kind === "photos" && <span className="mt-0.5 size-8 shrink-0 border-[3px] border-white bg-[#3a3632] shadow-sm" />}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className="label text-[0.62rem]">{t.kind[evidence.kind]}</span>
-          {fresh && <span className="hand -rotate-3 text-base">{t.newEvidence.toLowerCase()}</span>}
+          {fresh && (
+            <span className="hand anim-write -rotate-3 text-base" style={delay(dealDelay + 450)}>
+              {t.newEvidence.toLowerCase()}
+            </span>
+          )}
         </span>
         <span className="block text-sm leading-snug group-hover:text-stamp">{evidence.title[lang]}</span>
       </span>

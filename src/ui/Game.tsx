@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { santaRita as c } from "@/content/santa-rita";
 import { applyTurn, availableEvidence, evaluateAccusation, initialState, questionsLeft, validateTurn } from "@/game/engine";
 import type { Evidence, GameState, Lang, Suspect, Turn, TurnInput, UnlockRule } from "@/game/types";
@@ -8,6 +8,7 @@ import { Accusation } from "./Accusation";
 import { DocSlip, PaperClip } from "./Doc";
 import { EvidenceSheet } from "./EvidenceSheet";
 import { Fingerprint } from "./Fingerprint";
+import { afterMotion, delay } from "./motion";
 import { clockAt, strings } from "./strings";
 import { Line, Transcript } from "./Transcript";
 import { EMPTY, useSavedGame } from "./useSavedGame";
@@ -30,7 +31,15 @@ export function Game() {
   const [freshIndex, setFreshIndex] = useState<number | null>(null);
   // Only matters on small screens; on desktop the list is always shown.
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // The evidence is dealt onto the desk one slip at a time when the file opens; later slips land at once.
+  const [dealt, setDealt] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!started) return;
+    const id = window.setTimeout(() => setDealt(true), 1500);
+    return () => window.clearTimeout(id);
+  }, [started]);
 
   const lang = game.lang;
   const t = strings[lang];
@@ -95,9 +104,13 @@ export function Game() {
       setError(t.errors.generic);
     } finally {
       setPending(null);
-      inputRef.current?.focus();
     }
   }
+
+  // The input line is hidden while a reply is being typed; put the cursor back when it returns.
+  useEffect(() => {
+    if (!pending) inputRef.current?.focus({ preventScroll: true });
+  }, [pending]);
 
   function markSeen(id: string) {
     if (!game.seen.includes(id)) setGame((g) => ({ ...g, seen: [...g.seen, id] }));
@@ -148,7 +161,11 @@ export function Game() {
           <div className="sheet flex items-center gap-4 px-4 py-2 max-sm:basis-full max-sm:justify-between">
             <div>
               <div className="label">{t.clock}</div>
-              <div className="font-mono text-lg leading-tight tabular-nums">{clockAt(state.questionsUsed)}</div>
+              <div className="overflow-hidden font-mono text-lg leading-tight tabular-nums">
+                <div key={state.questionsUsed} className="anim-tick">
+                  {clockAt(state.questionsUsed)}
+                </div>
+              </div>
             </div>
             <Tally total={c.questionBudget} left={left} label={t.questionsLeft} note={t.left(left)} />
             <button onClick={() => setAccusing(true)} className="stamp shrink-0 cursor-pointer hover:bg-stamp hover:text-paper">
@@ -172,12 +189,13 @@ export function Game() {
             </button>
           </h2>
           <ul className={`space-y-3.5 ${evidenceOpen ? "" : "max-lg:hidden"}`}>
-            {evidence.map((e) => (
+            {evidence.map((e, i) => (
               <li key={e.id}>
                 <DocSlip
                   evidence={e}
                   lang={lang}
                   fresh={unseen.includes(e.id)}
+                  dealDelay={dealt ? 0 : 250 + i * 110}
                   onOpen={() => {
                     setReading(e.id);
                     markSeen(e.id);
@@ -189,11 +207,20 @@ export function Game() {
         </aside>
 
         <div>
-          <Tabs lang={lang} active={suspect.id} onPick={setSuspectId} />
+          <Tabs
+            lang={lang}
+            active={suspect.id}
+            onPick={(id) => {
+              setSuspectId(id);
+              // A reply only types out once; coming back to a tab shows it finished.
+              setFreshIndex(null);
+            }}
+          />
           <main className="manila relative p-3 sm:p-5">
-            <IndexCard suspect={suspect} lang={lang} statements={suspectTurns.length} changedStory={changedStory} />
+            {/* Keyed by suspect so a new card and record are laid down when the tab changes. */}
+            <IndexCard key={`card-${suspect.id}`} suspect={suspect} lang={lang} statements={suspectTurns.length} changedStory={changedStory} />
 
-            <section className="lined relative mt-4 min-h-96 pt-7 pb-6 pr-4 shadow-(--shadow) sm:pr-6">
+            <section key={`record-${suspect.id}`} className="lined anim-drop relative mt-4 min-h-96 pt-7 pb-6 pr-4 shadow-(--shadow) sm:pr-6" style={delay(90)}>
               <div className="mb-7 flex items-baseline justify-between gap-3 pl-16">
                 <span className="label">
                   {t.record} · {suspect.name}
@@ -228,7 +255,7 @@ export function Game() {
                   <Line time="" who="">
                     {t.accuseForced}
                   </Line>
-                ) : (
+                ) : pending ? null : (
                   <>
                     {presentingEvidence && (
                       <Line time="" who="">
@@ -322,15 +349,15 @@ function Tally({ total, left, label, note }: { total: number; left: number; labe
       </div>
       <div className="mt-1 grid grid-cols-12 gap-0.75">
         {Array.from({ length: total }, (_, i) => (
-          <span
-            key={i}
-            className={`size-2.25 border ${i < used ? "border-ink-soft" : left <= 5 ? "border-stamp" : "border-ink/60"}`}
-            style={
-              i < used
-                ? { background: "linear-gradient(to top right, transparent 44%, var(--ink) 44% 58%, transparent 58%)" }
-                : undefined
-            }
-          />
+          <span key={i} className={`relative size-2.25 border ${i < used ? "border-ink-soft" : left <= 5 ? "border-stamp" : "border-ink/60"}`}>
+            {/* The strike mounts when the question is spent, so only the newest one draws itself. */}
+            {i < used && (
+              <span
+                className="anim-strike absolute inset-0"
+                style={{ background: "linear-gradient(to top right, transparent 44%, var(--ink) 44% 58%, transparent 58%)" }}
+              />
+            )}
+          </span>
         ))}
       </div>
     </div>
@@ -374,7 +401,7 @@ function IndexCard({
 }) {
   const t = strings[lang];
   return (
-    <article className="sheet relative flex gap-4 px-4 py-4 sm:rotate-[-0.4deg] sm:gap-6 sm:px-6">
+    <article className="sheet anim-drop relative flex gap-4 px-4 py-4 sm:rotate-[-0.4deg] sm:gap-6 sm:px-6">
       <div className="min-w-0 flex-1 space-y-2">
         <Field label={t.field.name}>
           <span className="text-xl font-semibold">{suspect.name}</span>
@@ -393,12 +420,14 @@ function IndexCard({
         </Field>
         {/* In the margin on wide cards; on its own line on phones so it never covers text. */}
         {changedStory && (
-          <span className="hand block -rotate-2 text-xl sm:absolute sm:top-3 sm:right-28 sm:-rotate-6">{t.changedStory}</span>
+          <span className="hand anim-write block -rotate-2 text-xl sm:absolute sm:top-3 sm:right-28 sm:-rotate-6" style={delay(700)}>
+            {t.changedStory}
+          </span>
         )}
       </div>
       <div className="hidden shrink-0 flex-col items-center sm:flex">
         <div className="border border-ink/30 px-2 pt-2 pb-1">
-          <Fingerprint seed={suspect.name} className="h-20 w-16 text-ink" />
+          <Fingerprint seed={suspect.name} inked className="h-20 w-16 text-ink" />
         </div>
         <span className="label mt-1 text-[0.6rem]">{t.field.print}</span>
       </div>
@@ -470,9 +499,18 @@ function Briefing({
   onResume: () => void;
 }) {
   const t = strings[lang];
+  const [opening, setOpening] = useState(false);
+
+  /** The cover swings open like a book before the file is shown. */
+  function open(then: () => void) {
+    if (opening) return;
+    setOpening(true);
+    afterMotion(600, then);
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl">
+    <main className="flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      <div className={`w-full max-w-2xl ${opening ? "anim-folder-open" : "anim-drop"}`}>
         <div className="flex items-end justify-between">
           <div className="manila ml-4 rounded-t-md px-5 pt-2.5 pb-2 shadow-none">
             <span className="sticker text-[0.65rem]">
@@ -497,8 +535,8 @@ function Briefing({
             {c.suspects.map((s, i) => (
               <li
                 key={s.id}
-                className="sheet flex items-center gap-3 px-3 py-3"
-                style={{ transform: `rotate(${(i - 1) * 0.7}deg)` }}
+                className="sheet anim-deal flex items-center gap-3 px-3 py-3"
+                style={{ "--tilt": `${(i - 1) * 0.7}deg`, "--delay": `${350 + i * 140}ms`, transform: `rotate(${(i - 1) * 0.7}deg)` } as React.CSSProperties}
               >
                 <Fingerprint seed={s.name} className="h-12 w-10 shrink-0 text-ink" />
                 <span className="min-w-0">
@@ -511,11 +549,15 @@ function Briefing({
 
           <div className="mt-9 flex flex-wrap items-center gap-5">
             {canResume && (
-              <button onClick={onResume} className="ink-button">
+              <button onClick={() => open(onResume)} className="ink-button">
                 {t.resume}
               </button>
             )}
-            <button onClick={onStart} className={canResume ? "label cursor-pointer underline-offset-4 hover:underline" : "ink-button"}>
+            {/* Starting over asks for confirmation first, so only a fresh start opens the cover. */}
+            <button
+              onClick={canResume ? onStart : () => open(onStart)}
+              className={canResume ? "label cursor-pointer underline-offset-4 hover:underline" : "ink-button"}
+            >
               {canResume ? t.restart : t.open}
             </button>
           </div>
@@ -537,28 +579,37 @@ function Ending({
   onLang: (l: Lang) => void;
 }) {
   const t = strings[lang];
+  const paragraphs = c.epilogues[verdict][lang].split("\n\n");
+  // Sheet lands, stamp comes down at STAMP_MS, the desk jolts as it hits, then the epilogue.
+  const STAMP_MS = 300;
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <article className="sheet relative w-full max-w-xl px-6 pt-8 pb-10 sm:px-10 sm:pt-10">
-        <div className="flex items-start justify-between gap-4">
-          <div className="label">
-            {t.agency} · {t.fileNo} 0522-SR
+      <div className="anim-thud w-full max-w-xl" style={delay(STAMP_MS + 230)}>
+        <article className="sheet anim-drop relative px-6 pt-8 pb-10 sm:px-10 sm:pt-10">
+          <div className="flex items-start justify-between gap-4">
+            <div className="label">
+              {t.agency} · {t.fileNo} 0522-SR
+            </div>
+            <LangToggle lang={lang} onLang={onLang} />
           </div>
-          <LangToggle lang={lang} onLang={onLang} />
-        </div>
-        <h1 className="mt-4 text-2xl font-semibold">{c.title[lang]}</h1>
-        <div className="mt-8 mb-2 flex justify-center">
-          <span className="stamp stamp-down px-5 py-2 text-2xl sm:text-3xl">{t.verdict[verdict]}</span>
-        </div>
-        <div className="mt-8 space-y-4 text-lg leading-relaxed">
-          {c.epilogues[verdict][lang].split("\n\n").map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-        </div>
-        <button onClick={onRestart} className="ink-button mt-10">
-          {t.playAgain}
-        </button>
-      </article>
+          <h1 className="mt-4 text-2xl font-semibold">{c.title[lang]}</h1>
+          <div className="mt-8 mb-2 flex justify-center">
+            <span className="stamp stamp-down px-5 py-2 text-2xl sm:text-3xl" style={delay(STAMP_MS)}>
+              {t.verdict[verdict]}
+            </span>
+          </div>
+          <div className="mt-8 space-y-4 text-lg leading-relaxed">
+            {paragraphs.map((p, i) => (
+              <p key={i} className="anim-fade-up" style={delay(900 + i * 450)}>
+                {p}
+              </p>
+            ))}
+          </div>
+          <button onClick={onRestart} className="ink-button anim-fade-up mt-10" style={delay(900 + paragraphs.length * 450)}>
+            {t.playAgain}
+          </button>
+        </article>
+      </div>
     </main>
   );
 }

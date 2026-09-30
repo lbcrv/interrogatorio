@@ -5,7 +5,8 @@ import { santaRita as c } from "@/content/santa-rita";
 import type { Lang, Suspect, TurnInput } from "@/game/types";
 import type { PlayedTurn } from "./Game";
 import { clockAt, strings } from "./strings";
-import { Typewriter } from "./Typewriter";
+import { delay } from "./motion";
+import { Typewriter, typingMs } from "./Typewriter";
 
 /** "Ernesto «Neto» Salazar" -> "E. SALAZAR", the way a typed transcript names the speaker. */
 export function speakerTag(name: string): string {
@@ -35,14 +36,15 @@ export function Transcript({
 }) {
   const t = strings[lang];
   const end = useRef<HTMLDivElement>(null);
-  const last = useRef(suspect.id);
+  const mounted = useRef(false);
   const tag = speakerTag(suspect.name);
 
-  // Follow new lines, but don't yank the page when the player just switches tabs.
+  // Follow new lines. The record remounts per suspect, so skipping the first run
+  // keeps the page still when the player just opens a tab.
   useEffect(() => {
-    if (last.current === suspect.id) end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    last.current = suspect.id;
-  }, [suspect.id, played.length, pending]);
+    if (mounted.current) end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    mounted.current = true;
+  }, [played.length, pending]);
 
   return (
     <div className="font-mono text-[0.84rem]" aria-live="polite">
@@ -60,7 +62,13 @@ export function Transcript({
             </Line>
             {p.fired?.unlocks && (
               <Line time="" who="">
-                <span className="hand inline-block -rotate-1 text-lg">{t.added(evidenceTitle(p.fired.unlocks, lang))}</span>
+                <span
+                  className={`hand inline-block -rotate-1 text-lg ${p.index === freshIndex ? "anim-write" : ""}`}
+                  // Written once the reply has finished typing out.
+                  style={p.index === freshIndex ? delay(typingMs(p.reply) + 150) : undefined}
+                >
+                  {t.added(evidenceTitle(p.fired.unlocks, lang))}
+                </span>
               </Line>
             )}
           </li>
@@ -75,7 +83,9 @@ export function Transcript({
               {pending.text}
             </Line>
             <Line time="" who={tag} strong>
-              <span className="animate-pulse">{t.waiting}</span>
+              <span className="typing-dots" role="status" aria-label={t.waiting}>
+                ...
+              </span>
             </Line>
           </li>
         )}

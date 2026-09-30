@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { santaRita as c } from "@/content/santa-rita";
 import type { Evidence, Lang } from "@/game/types";
+import { afterMotion } from "./motion";
 import { strings } from "./strings";
 
 export function Accusation({
@@ -20,6 +21,7 @@ export function Accusation({
   const t = strings[lang];
   const [who, setWho] = useState<string | null>(null);
   const [cited, setCited] = useState<string[]>([]);
+  const [pressing, setPressing] = useState(false);
   const max = c.solution.maxCitations;
 
   function toggle(id: string) {
@@ -27,12 +29,15 @@ export function Accusation({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="accuse-title">
+    <div className="anim-backdrop fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="accuse-title">
       <form
-        className="sheet slide-in max-h-[92vh] w-full max-w-xl overflow-y-auto px-6 py-7 shadow-2xl sm:px-9"
+        className="sheet anim-lift max-h-[92vh] w-full max-w-xl overflow-y-auto px-6 py-7 shadow-2xl sm:px-9"
         onSubmit={(e) => {
           e.preventDefault();
-          if (who) onAccuse(who, cited);
+          if (!who || pressing) return;
+          // The stamp comes down on the form first, then the verdict.
+          setPressing(true);
+          afterMotion(260, () => onAccuse(who, cited));
         }}
       >
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-2">
@@ -80,7 +85,7 @@ export function Accusation({
           <button
             type="submit"
             disabled={!who}
-            className="stamp cursor-pointer px-4 py-1.5 text-base hover:bg-stamp hover:text-paper disabled:cursor-not-allowed disabled:opacity-35"
+            className={`stamp cursor-pointer px-4 py-1.5 text-base ${pressing ? "anim-press bg-stamp text-paper" : ""} hover:bg-stamp hover:text-paper disabled:cursor-not-allowed disabled:opacity-35`}
           >
             {t.accuseConfirm}
           </button>
