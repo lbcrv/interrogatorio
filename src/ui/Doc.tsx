@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useRef } from "react";
 import type { Evidence, Lang } from "@/game/types";
 import { delay } from "./motion";
+import { PHOTO_SCENES, PhotoFrame } from "./PhotoScenes";
 import { play } from "./sound";
 import { strings } from "./strings";
 
@@ -92,7 +93,11 @@ export function DocSlip({
       whileDrag={{ scale: 1.06, rotate: tilt + 4, zIndex: 40, boxShadow: "0 22px 34px -12px rgba(0,0,0,0.65)", cursor: "grabbing" }}
       className={`sheet group relative flex w-full cursor-pointer items-start gap-3 px-3 py-2.5 text-left ${draggable ? "touch-none" : ""}`}
     >
-      {evidence.kind === "photos" && <span className="mt-0.5 size-8 shrink-0 border-[3px] border-white bg-[#3a3632] shadow-sm" />}
+      {evidence.kind === "photos" && (
+        <span className="mt-0.5 h-8 w-10 shrink-0 overflow-hidden border-[3px] border-white bg-[#3a3632] shadow-sm">
+          {PHOTO_SCENES[evidence.id] && <PhotoFrame frame={PHOTO_SCENES[evidence.id][0]} n={1} showNumber={false} />}
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className="label text-[0.62rem]">{t.kind[evidence.kind]}</span>
@@ -119,7 +124,7 @@ export function DocBody({ evidence, lang }: { evidence: Evidence; lang: Lang }) 
       // Sits on the ruled lines of the sheet, so it keeps the sheet's line height.
       return <p className="font-serif text-[1.02rem] leading-7 italic">{body}</p>;
     case "photos":
-      return <Photos body={body} lang={lang} />;
+      return <Photos id={evidence.id} body={body} lang={lang} />;
     case "messages":
       return <Messages body={body} />;
     case "report":
@@ -177,30 +182,31 @@ function Program({ body }: { body: string }) {
   );
 }
 
-function Photos({ body, lang }: { body: string; lang: Lang }) {
+function Photos({ id, body, lang }: { id: string; body: string; lang: Lang }) {
   const t = strings[lang];
+  const frames = PHOTO_SCENES[id] ?? [];
   return (
     <div>
       <div className="bg-[#1f1c19] px-2 py-1.5 shadow-inner">
         <Sprockets />
         <div className="grid grid-cols-3 gap-1.5 py-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="relative aspect-[4/3]"
-              style={{
-                background: `radial-gradient(ellipse at ${35 + i * 15}% ${45 + i * 5}%, #6b655c, #2e2a26 70%), #2e2a26`,
-              }}
-            >
-              <span className="absolute bottom-1 left-1 bg-paper px-1 font-mono text-[0.6rem] leading-tight font-medium text-ink">
-                {i + 1}
-              </span>
+          {frames.map((frame, i) => (
+            <div key={i} className="aspect-[4/3]">
+              <PhotoFrame frame={frame} n={i + 1} />
             </div>
           ))}
         </div>
         <Sprockets />
         <p className="pb-0.5 font-mono text-[0.6rem] tracking-widest text-[#8d877d] uppercase">{t.contactSheet}</p>
       </div>
+      {/* Typed captions under the strip, one per frame. */}
+      <ol className="mt-2 grid grid-cols-3 gap-1.5 font-mono text-[0.68rem] leading-snug text-ink-soft">
+        {frames.map((frame, i) => (
+          <li key={i}>
+            {i + 1}. {frame.caption[lang]}
+          </li>
+        ))}
+      </ol>
       <p className="mt-4 leading-relaxed whitespace-pre-line">{body}</p>
     </div>
   );
