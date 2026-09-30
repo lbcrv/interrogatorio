@@ -38,6 +38,8 @@ export function Game() {
   const [dragOver, setDragOver] = useState<boolean | null>(null);
   // Dragging evidence needs a mouse; on touch screens it would fight scrolling.
   const [canDrag, setCanDrag] = useState(false);
+  // Key sounds only with a physical keyboard; phone keyboards make their own.
+  const [keySounds, setKeySounds] = useState(false);
   // The prosecutor's memo: a page before the first case file, then a dialog from the header.
   const [memoPage, setMemoPage] = useState(false);
   const [memoDialog, setMemoDialog] = useState(false);
@@ -50,11 +52,19 @@ export function Game() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const query = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
-    const sync = () => setCanDrag(query.matches);
+    const wide = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
+    const fine = window.matchMedia("(pointer: fine)");
+    const sync = () => {
+      setCanDrag(wide.matches);
+      setKeySounds(fine.matches);
+    };
     sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
+    wide.addEventListener("change", sync);
+    fine.addEventListener("change", sync);
+    return () => {
+      wide.removeEventListener("change", sync);
+      fine.removeEventListener("change", sync);
+    };
   }, []);
 
   useEffect(() => {
@@ -110,6 +120,7 @@ export function Game() {
       : { suspectId, kind: "ask", text: draft };
     if (pending || validateTurn(c, state, next)) return;
 
+    play("return");
     setPending(next);
     setError(null);
     try {
@@ -354,7 +365,9 @@ export function Game() {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
                             void send();
+                            return;
                           }
+                          if (keySounds) typeSound(e);
                         }}
                         maxLength={400}
                         rows={2}
@@ -412,6 +425,16 @@ export function Game() {
     </div>
     </MotionConfig>
   );
+}
+
+/**
+ * The player's own keys on the typewriter. One sound per real keystroke:
+ * nothing for held keys, shortcuts like paste, or keys that type nothing.
+ */
+function typeSound(e: React.KeyboardEvent) {
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.nativeEvent.isComposing) return;
+  if (e.key === " " || e.key === "Enter") play("space");
+  else if (e.key.length === 1 || e.key === "Backspace") play("type");
 }
 
 /** "Ernesto «Neto» Salazar" -> "Salazar". What goes on a folder tab. */

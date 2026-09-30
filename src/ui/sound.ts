@@ -1,10 +1,12 @@
 /**
  * Office sounds, synthesized with Web Audio: no audio files, nothing to license.
- * key: a typewriter key. bell: the carriage bell at the end of a line.
+ * key: a typewriter key, for the suspect's reply. bell: the carriage bell at the end of a line.
+ * type / space / return: the player's own keys, quieter than the reply, and the carriage
+ * pulled back when a question is sent.
  * paper: a sheet handled. slap: a document put down on the table.
  * pen: a few marker strokes. thud: the rubber stamp.
  */
-export type Cue = "key" | "bell" | "paper" | "slap" | "pen" | "thud";
+export type Cue = "key" | "bell" | "type" | "space" | "return" | "paper" | "slap" | "pen" | "thud";
 
 const STORAGE_KEY = "interrogatorio:sound";
 
@@ -105,6 +107,23 @@ export function play(cue: Cue): void {
     case "key":
       burst(a, t, { type: "bandpass", freq: 1900 + r * 1500, q: 1.4, peak: 0.32, attack: 0.002, decay: 0.035 });
       tone(a, t, { type: "triangle", from: 150 + r * 50, peak: 0.18, decay: 0.035 });
+      break;
+    case "type":
+      burst(a, t, { type: "bandpass", freq: 2100 + r * 1600, q: 1.4, peak: 0.15, attack: 0.002, decay: 0.03 });
+      tone(a, t, { type: "triangle", from: 160 + r * 60, peak: 0.08, decay: 0.03 });
+      break;
+    case "space":
+      burst(a, t, { type: "bandpass", freq: 900 + r * 200, q: 1, peak: 0.14, attack: 0.003, decay: 0.05 });
+      tone(a, t, { type: "triangle", from: 105, peak: 0.1, decay: 0.05 });
+      break;
+    case "return":
+      // The ratchet of the carriage sliding back, then it knocks against the stop.
+      for (let i = 0; i < 7; i++) {
+        burst(a, t + i * 0.028, { type: "bandpass", freq: 2600 - i * 120, q: 2, peak: 0.07, attack: 0.002, decay: 0.018 });
+      }
+      burst(a, t, { type: "lowpass", freq: 1800, sweepTo: 600, peak: 0.05, attack: 0.05, decay: 0.16 });
+      burst(a, t + 0.22, { type: "lowpass", freq: 1200, peak: 0.3, attack: 0.002, decay: 0.07 });
+      tone(a, t + 0.22, { type: "triangle", from: 130, to: 80, peak: 0.16, decay: 0.08 });
       break;
     case "bell":
       tone(a, t, { type: "sine", from: 2093, peak: 0.1, decay: 1.2 });
