@@ -20,9 +20,16 @@ const hand = Covered_By_Your_Grace({
   weight: "400",
 });
 
+const title = "Interrogatorio · La corona de Santa Rita";
+const description = "Un juego de detectives: tres sospechosos, 24 preguntas y una corona que no aparece. En español y en inglés.";
+
 export const metadata: Metadata = {
-  title: "Interrogatorio",
-  description: "La corona de Santa Rita. Three suspects, 24 questions, one crown.",
+  // Share cards need absolute image URLs. SITE_URL overrides it for another domain.
+  metadataBase: new URL(process.env.SITE_URL ?? "https://interrogatorio-five.vercel.app"),
+  title,
+  description,
+  openGraph: { title, description, type: "website", locale: "es_HN", siteName: "Interrogatorio" },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
