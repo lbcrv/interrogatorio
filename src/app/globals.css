@@ -1,30 +1,41 @@
 @import "tailwindcss";
 
-/* Paper, ink and one stamp red. Nothing else. */
+/*
+ * A desk, a manila folder, paper, ink and one stamp red. Nothing else.
+ * The papers stay light in dark mode: they are objects under a lamp, not a theme.
+ */
 :root {
-  --desk: #e4ddcd;
-  --paper: #f4efe3;
+  --desk: #2b251f;
+  --desk-ink: #d6ccb6;
+  --manila: #dcc89c;
+  --manila-back: #c7b183;
+  --paper: #f6f1e3;
   --ink: #1d1b17;
   --ink-soft: #5c574c;
   --rule: #cbc2ad;
   --stamp: #a3261b;
   --highlight: #ebe2c8;
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.18), 0 14px 28px -14px rgba(0, 0, 0, 0.55);
+  /* Paper fiber. Tiny inline SVG noise, multiplied over every sheet. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --desk: #12110f;
-    --paper: #1c1a17;
-    --ink: #e6dfcf;
-    --ink-soft: #9a9384;
-    --rule: #3a362f;
-    --stamp: #d9544a;
-    --highlight: #2a2620;
+    --desk: #161310;
+    --desk-ink: #b9af9a;
+    --manila: #c2ae82;
+    --manila-back: #a8946a;
+    --paper: #e9e1cd;
+    --rule: #c3b99f;
   }
 }
 
 @theme inline {
   --color-desk: var(--desk);
+  --color-desk-ink: var(--desk-ink);
+  --color-manila: var(--manila);
+  --color-manila-back: var(--manila-back);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
@@ -33,12 +44,18 @@
   --color-highlight: var(--highlight);
   --font-serif: var(--font-source-serif);
   --font-mono: var(--font-plex-mono);
+  --font-hand: var(--font-hand);
 }
 
 body {
-  background: var(--desk);
   color: var(--ink);
   font-family: var(--font-source-serif), Georgia, serif;
+  /* Desk lamp from the upper left, over walnut grain. */
+  background:
+    radial-gradient(ellipse 90% 70% at 30% 0%, rgba(255, 226, 170, 0.1), transparent 70%),
+    repeating-linear-gradient(94deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 9px, rgba(255, 255, 255, 0.025) 9px 11px, transparent 11px 23px),
+    var(--desk);
+  background-attachment: fixed;
 }
 
 ::selection {
@@ -57,15 +74,139 @@ body {
     color: var(--ink-soft);
   }
 
+  /* Text sitting directly on the desk. */
+  .on-desk {
+    color: var(--desk-ink);
+  }
+
+  .sheet {
+    background: var(--grain), var(--paper);
+    box-shadow: var(--shadow);
+  }
+
+  .manila {
+    background: var(--grain), var(--manila);
+    box-shadow: var(--shadow);
+  }
+
+  /* Legal pad: ruled lines and a red margin. Line height must match --line. */
+  .lined {
+    --line: 1.75rem;
+    background:
+      linear-gradient(90deg, transparent 3.25rem, color-mix(in srgb, var(--stamp) 45%, transparent) 3.25rem 3.35rem, transparent 3.35rem),
+      repeating-linear-gradient(transparent 0 calc(var(--line) - 1px), color-mix(in srgb, var(--ink) 11%, transparent) calc(var(--line) - 1px) var(--line)),
+      var(--grain),
+      var(--paper);
+    line-height: var(--line);
+  }
+
+  /* Label-maker strip stuck on the folder. */
+  .sticker {
+    font-family: var(--font-plex-mono), monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 0.2rem 0.55rem;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  }
+
+  /* The detective's marker. */
+  .hand {
+    font-family: var(--font-hand), cursive;
+    color: var(--stamp);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
   .stamp {
     font-family: var(--font-plex-mono), monospace;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--stamp);
     border: 2px solid var(--stamp);
-    padding: 0.15rem 0.5rem;
+    box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 3px color-mix(in srgb, var(--stamp) 70%, transparent);
+    padding: 0.25rem 0.6rem;
     display: inline-block;
     transform: rotate(-2deg);
+    /* Uneven ink: the rubber never presses evenly. */
+    mask-image: var(--grain), linear-gradient(#000, #000);
+    mask-composite: exclude;
+  }
+
+  /* Form box ticked with a pen X. */
+  .xbox {
+    appearance: none;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--ink);
+    cursor: pointer;
+    position: relative;
+    top: 0.15rem;
+  }
+  .xbox:checked {
+    background:
+      linear-gradient(45deg, transparent 43%, var(--stamp) 43% 57%, transparent 57%),
+      linear-gradient(-45deg, transparent 43%, var(--stamp) 43% 57%, transparent 57%);
+  }
+  .xbox:disabled {
+    cursor: not-allowed;
+  }
+
+  .ink-button {
+    font-family: var(--font-plex-mono), monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.55rem 1.1rem;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+  }
+  .ink-button:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  }
+  .ink-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+}
+
+@keyframes stamp-down {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) rotate(-9deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.96) rotate(-6deg);
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) rotate(var(--tilt, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--tilt, 0deg));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stamp-down {
+    animation: stamp-down 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+  .slide-in {
+    animation: slide-in 260ms ease-out both;
   }
 }
 

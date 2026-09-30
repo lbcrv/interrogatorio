@@ -8,7 +8,7 @@ import { clockAt, strings } from "./strings";
 import { Typewriter } from "./Typewriter";
 
 /** "Ernesto «Neto» Salazar" -> "E. SALAZAR", the way a typed transcript names the speaker. */
-function speakerTag(name: string): string {
+export function speakerTag(name: string): string {
   const words = name.split(/\s+/).filter((w) => !/^[«"“]/.test(w));
   return `${words[0][0]}. ${words[words.length - 1]}`.toUpperCase();
 }
@@ -17,6 +17,7 @@ function evidenceTitle(id: string | undefined, lang: Lang): string {
   return c.evidence.find((e) => e.id === id)?.title[lang] ?? "";
 }
 
+/** Typed on the ruled sheet: time in the margin, then speaker and words. */
 export function Transcript({
   lang,
   suspect,
@@ -34,43 +35,46 @@ export function Transcript({
 }) {
   const t = strings[lang];
   const end = useRef<HTMLDivElement>(null);
+  const last = useRef(suspect.id);
   const tag = speakerTag(suspect.name);
 
+  // Follow new lines, but don't yank the page when the player just switches tabs.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [played.length, pending]);
+    if (last.current === suspect.id) end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    last.current = suspect.id;
+  }, [suspect.id, played.length, pending]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-5 font-mono text-[0.84rem] leading-relaxed" aria-live="polite">
-      {played.length === 0 && !pending && <p className="text-ink-soft">{t.emptyTranscript(suspect.name)}</p>}
+    <div className="font-mono text-[0.84rem]" aria-live="polite">
+      {played.length === 0 && !pending && <Line time="" who="">{<span className="text-ink-soft">{t.emptyTranscript(suspect.name)}</span>}</Line>}
 
-      <ol className="space-y-5">
+      <ol className="space-y-7">
         {played.map((p) => (
-          <li key={p.index} className="space-y-2">
+          <li key={p.index}>
             <Line time={clockAt(p.index)} who={t.detective}>
               {p.kind === "present" && <span className="text-stamp">{t.showed(evidenceTitle(p.evidenceId, lang))} </span>}
               {p.text}
             </Line>
-            <Line time={clockAt(p.index)} who={tag} strong>
+            <Line time="" who={tag} strong>
               <Typewriter text={p.reply} animate={p.index === freshIndex} />
             </Line>
             {p.fired?.unlocks && (
-              <p className="pl-[7.5rem] text-xs uppercase tracking-wider text-stamp max-sm:pl-0">
-                {t.added(evidenceTitle(p.fired.unlocks, lang))}
-              </p>
+              <Line time="" who="">
+                <span className="hand inline-block -rotate-1 text-lg">{t.added(evidenceTitle(p.fired.unlocks, lang))}</span>
+              </Line>
             )}
           </li>
         ))}
 
         {pending && (
-          <li className="space-y-2">
+          <li>
             <Line time={pendingTime} who={t.detective}>
               {pending.kind === "present" && (
                 <span className="text-stamp">{t.showed(evidenceTitle(pending.evidenceId, lang))} </span>
               )}
               {pending.text}
             </Line>
-            <Line time={pendingTime} who={tag} strong>
+            <Line time="" who={tag} strong>
               <span className="animate-pulse">{t.waiting}</span>
             </Line>
           </li>
@@ -81,15 +85,17 @@ export function Transcript({
   );
 }
 
-function Line({ time, who, strong = false, children }: { time: string; who: string; strong?: boolean; children: React.ReactNode }) {
+export function Line({ time, who, strong = false, children }: { time: string; who: string; strong?: boolean; children: React.ReactNode }) {
   return (
-    <p className="grid grid-cols-[3rem_4rem_1fr] gap-x-2 max-sm:grid-cols-[3rem_1fr]">
-      <span className="text-ink-soft tabular-nums">{time}</span>
-      <span className={`${strong ? "text-ink" : "text-ink-soft"} max-sm:hidden`}>{who}</span>
-      <span className={`whitespace-pre-line ${strong ? "" : "text-ink-soft"}`}>
-        <span className="sm:hidden">{who} </span>
-        {children}
-      </span>
-    </p>
+    <div className="grid grid-cols-[3.25rem_1fr]">
+      <span className="pl-1.5 text-[0.72rem] text-ink-soft tabular-nums">{time}</span>
+      <p className="grid grid-cols-[5.5rem_1fr] pl-3 max-sm:grid-cols-1">
+        <span className={`${strong ? "font-medium text-ink" : "text-ink-soft"} max-sm:hidden`}>{who}</span>
+        <span className={`whitespace-pre-line ${strong ? "" : "text-ink-soft"}`}>
+          {who && <span className={`sm:hidden ${strong ? "font-medium" : ""}`}>{who} </span>}
+          {children}
+        </span>
+      </p>
+    </div>
   );
 }

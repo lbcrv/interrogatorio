@@ -139,6 +139,7 @@ REGLAS DE TU PERSONAJE:
   evidence: [
     {
       id: "informe",
+      kind: "report",
       initial: true,
       title: { es: "Informe de la Policía Municipal", en: "Municipal Police report" },
       body: {
@@ -148,6 +149,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "programa",
+      kind: "program",
       initial: true,
       title: { es: "Programa de las fiestas patronales", en: "Fiesta program" },
       body: {
@@ -157,6 +159,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "chayo",
+      kind: "statement",
       initial: true,
       title: { es: "Declaración de Rosario «Chayo» Gómez, tamalera", en: "Statement of Rosario “Chayo” Gómez, tamale vendor" },
       body: {
@@ -166,6 +169,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "fotos-escena",
+      kind: "photos",
       initial: true,
       title: { es: "Fotografías de la sacristía, 7:10", en: "Sacristy photographs, 7:10" },
       body: {
@@ -175,6 +179,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "fotos-lucia",
+      kind: "photos",
       initial: false,
       title: { es: "Fotografías de Lucía Paredes, 23:07 a 23:11", en: "Lucía Paredes's photographs, 23:07 to 23:11" },
       body: {
@@ -184,6 +189,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "mensajes-neto",
+      kind: "messages",
       initial: false,
       title: { es: "Mensajes del teléfono de Neto", en: "Messages from Neto's phone" },
       body: {
@@ -193,6 +199,7 @@ REGLAS DE TU PERSONAJE:
     },
     {
       id: "declaracion-aurelio",
+      kind: "report",
       initial: false,
       title: { es: "Declaración ampliada de Aurelio Méndez", en: "Aurelio Méndez, amended statement" },
       body: {

@@ -27,25 +27,29 @@ export function Accusation({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/50 p-4" role="dialog" aria-modal="true" aria-labelledby="accuse-title">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="accuse-title">
       <form
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto border border-rule bg-paper px-6 py-7 shadow-xl sm:px-8"
+        className="sheet slide-in max-h-[92vh] w-full max-w-xl overflow-y-auto px-6 py-7 shadow-2xl sm:px-9"
         onSubmit={(e) => {
           e.preventDefault();
           if (who) onAccuse(who, cited);
         }}
       >
-        <h2 id="accuse-title" className="text-xl font-semibold">
-          {t.accuseTitle}
+        <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-2">
+          <span className="label">{t.agency}</span>
+          <span className="label">{t.fileNo} 0522-SR</span>
+        </div>
+        <h2 id="accuse-title" className="mt-4 text-2xl font-semibold">
+          {t.accuseRecord}
         </h2>
         {!onCancel && <p className="mt-2 text-sm text-stamp">{t.accuseForced}</p>}
 
         <fieldset className="mt-6">
-          <legend className="label mb-2">{t.accuseWho}</legend>
-          <div className="space-y-1">
+          <legend className="label mb-2">1. {t.accuseWho}</legend>
+          <div className="divide-y divide-rule border-y border-rule">
             {c.suspects.map((s) => (
-              <label key={s.id} className="flex cursor-pointer items-baseline gap-3 py-1">
-                <input type="radio" name="who" checked={who === s.id} onChange={() => setWho(s.id)} className="accent-stamp" />
+              <label key={s.id} className="flex cursor-pointer items-baseline gap-3 py-2">
+                <input type="radio" name="who" checked={who === s.id} onChange={() => setWho(s.id)} className="xbox rounded-full" />
                 <span>
                   {s.name} <span className="text-sm text-ink-soft">· {s.role[lang]}</span>
                 </span>
@@ -56,28 +60,27 @@ export function Accusation({
 
         <fieldset className="mt-6">
           <legend className="label mb-2">
-            {t.accuseCite(max)} ({cited.length}/{max})
+            2. {t.accuseCite(max)} ({cited.length}/{max})
           </legend>
-          <div className="space-y-1">
-            {evidence.map((e) => (
-              <label
-                key={e.id}
-                className={`flex cursor-pointer items-baseline gap-3 py-1 text-sm ${
-                  !cited.includes(e.id) && cited.length >= max ? "opacity-40" : ""
-                }`}
-              >
-                <input type="checkbox" checked={cited.includes(e.id)} onChange={() => toggle(e.id)} className="accent-stamp" />
-                <span>{e.title[lang]}</span>
-              </label>
-            ))}
+          <div className="divide-y divide-rule border-y border-rule">
+            {evidence.map((e) => {
+              const full = !cited.includes(e.id) && cited.length >= max;
+              return (
+                <label key={e.id} className={`flex cursor-pointer items-baseline gap-3 py-2 text-sm ${full ? "opacity-40" : ""}`}>
+                  <input type="checkbox" checked={cited.includes(e.id)} onChange={() => toggle(e.id)} disabled={full} className="xbox" />
+                  <span className="flex-1">{e.title[lang]}</span>
+                  <span className="label shrink-0 text-[0.6rem]">{t.kind[e.kind]}</span>
+                </label>
+              );
+            })}
           </div>
         </fieldset>
 
-        <div className="mt-8 flex flex-wrap items-center gap-4">
+        <div className="mt-9 flex flex-wrap items-center gap-6">
           <button
             type="submit"
             disabled={!who}
-            className="stamp cursor-pointer text-sm hover:bg-stamp hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+            className="stamp cursor-pointer px-4 py-1.5 text-base hover:bg-stamp hover:text-paper disabled:cursor-not-allowed disabled:opacity-35"
           >
             {t.accuseConfirm}
           </button>

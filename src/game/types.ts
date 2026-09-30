@@ -3,8 +3,12 @@ export type Lang = "es" | "en";
 /** Text shown to the player, in both languages. */
 export type Localized = Record<Lang, string>;
 
+/** What kind of paper the evidence is. Presentation only; the engine ignores it. */
+export type EvidenceKind = "report" | "program" | "statement" | "photos" | "messages";
+
 export interface Evidence {
   id: string;
+  kind: EvidenceKind;
   title: Localized;
   body: Localized;
   /** In the dossier from the start; otherwise unlocked by a rule. */

@@ -2,7 +2,7 @@
 
 ## Project rules
 
-- **No AI slop.** No emojis anywhere (UI, copy, README, commits). No purple gradients, glassmorphism, sparkle icons or "AI-powered" badges. Copy is plain and concrete. The look is a police case file: paper, ink, one stamp red, Source Serif 4 + IBM Plex Mono.
+- **No AI slop.** No emojis anywhere (UI, copy, README, commits). No purple gradients, glassmorphism, sparkle icons or "AI-powered" badges. Copy is plain and concrete. The look is a physical case file on a desk: walnut desk, manila folder with suspect tabs, papers that look like what they are (typed report, printed program, ruled statement, contact sheet, phone printout), index cards with code-drawn fingerprints, ink, one stamp red. Source Serif 4 + IBM Plex Mono, plus Covered By Your Grace only for short marker notes in red. No AI portraits.
 - **The model plays characters; code runs the game.** Case truth, unlock rules, question budget and the verdict live in `src/content/` and `src/game/engine.ts`. Never move game logic into prompts.
 - **Need-to-know prompts.** A suspect's `sheet` holds only what that person knows. Only the culprit's sheet contains the solution.
 - **Costs $0.** Groq free tier only (`GROQ_API_KEY` in `.env.local`, never in chat or git). Rate limits are per Groq organization and shared with the owner's other projects, so keep prompts lean.

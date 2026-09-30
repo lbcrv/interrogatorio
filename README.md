@@ -6,6 +6,8 @@ A small town in Latin America, the morning of its patron saint's procession. The
 
 Playable in Spanish and English.
 
+![The case file mid-interrogation: evidence slips on the desk, the restorer's index card, and her typed statement record](docs/screenshot.jpg)
+
 ## How it works
 
 The model plays characters. It does not run the game.

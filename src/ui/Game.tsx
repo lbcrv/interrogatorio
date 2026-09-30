@@ -5,9 +5,11 @@ import { santaRita as c } from "@/content/santa-rita";
 import { applyTurn, availableEvidence, evaluateAccusation, initialState, questionsLeft, validateTurn } from "@/game/engine";
 import type { Evidence, GameState, Lang, Suspect, Turn, TurnInput, UnlockRule } from "@/game/types";
 import { Accusation } from "./Accusation";
+import { DocSlip, PaperClip } from "./Doc";
 import { EvidenceSheet } from "./EvidenceSheet";
+import { Fingerprint } from "./Fingerprint";
 import { clockAt, strings } from "./strings";
-import { Transcript } from "./Transcript";
+import { Line, Transcript } from "./Transcript";
 import { EMPTY, useSavedGame } from "./useSavedGame";
 
 export interface PlayedTurn extends Turn {
@@ -106,7 +108,7 @@ export function Game() {
     setAccusing(false);
   }
 
-  if (!loaded) return <main className="min-h-screen bg-desk" />;
+  if (!loaded) return <main className="min-h-screen" />;
 
   if (game.ending) {
     return <Ending lang={lang} verdict={game.ending.verdict} onRestart={() => restart(false)} onLang={setLang} />;
@@ -126,150 +128,158 @@ export function Game() {
 
   const readingEvidence = reading ? c.evidence.find((e) => e.id === reading) ?? null : null;
   const presentingEvidence = presenting ? c.evidence.find((e) => e.id === presenting) ?? null : null;
+  const suspectTurns = played.filter((p) => p.suspectId === suspect.id);
+  const changedStory = c.rules.some((r) => r.suspectId === suspect.id && state.admissions.includes(r.id));
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-rule bg-paper/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-          <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
-            <div className="label">{t.fileNo} 0522-SR</div>
-            <h1 className="text-lg font-semibold leading-tight">{c.title[lang]}</h1>
+      <header className="sticky top-0 z-20 bg-desk shadow-[0_10px_20px_-12px_rgba(0,0,0,0.6)]">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <span className="sticker text-[0.65rem]">
+              {t.fileNo} 0522-SR
+            </span>
+            <h1 className="on-desk mt-1.5 truncate text-lg leading-tight font-semibold">{c.title[lang]}</h1>
           </div>
-          <Stat label={t.clock} value={clockAt(state.questionsUsed)} />
-          <Stat label={t.questionsLeft} value={String(left)} warn={left <= 5} />
-          <button onClick={() => setAccusing(true)} className="stamp ml-auto shrink-0 cursor-pointer hover:bg-stamp hover:text-paper sm:ml-0">
-            {t.accuse}
-          </button>
-          <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="label cursor-pointer underline-offset-4 hover:underline">
+          <button onClick={() => setLang(lang === "es" ? "en" : "es")} className="label on-desk cursor-pointer underline-offset-4 hover:underline max-sm:order-first max-sm:basis-full max-sm:text-right">
             {t.lang}
           </button>
+          <div className="sheet flex items-center gap-4 px-4 py-2 max-sm:basis-full max-sm:justify-between">
+            <div>
+              <div className="label">{t.clock}</div>
+              <div className="font-mono text-lg leading-tight tabular-nums">{clockAt(state.questionsUsed)}</div>
+            </div>
+            <Tally total={c.questionBudget} left={left} label={t.questionsLeft} note={t.left(left)} />
+            <button onClick={() => setAccusing(true)} className="stamp shrink-0 cursor-pointer hover:bg-stamp hover:text-paper">
+              {t.accuse}
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-6">
-          <section>
-            <h2 className="label mb-2">{t.suspects}</h2>
-            <ul className="grid grid-cols-3 gap-2 lg:grid-cols-1">
-              {c.suspects.map((s) => (
-                <li key={s.id}>
-                  <button
-                    onClick={() => setSuspectId(s.id)}
-                    aria-pressed={s.id === suspectId}
-                    className={`w-full cursor-pointer border px-3 py-2 text-left transition-colors ${
-                      s.id === suspectId ? "border-ink bg-paper" : "border-rule hover:border-ink-soft"
-                    }`}
-                  >
-                    <span className="hidden text-sm font-semibold leading-snug lg:block">{s.name}</span>
-                    <span className="block text-sm font-semibold leading-snug lg:hidden">{shortName(s.name)}</span>
-                    <span className="label hidden normal-case tracking-normal lg:block">{s.role[lang]}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="label mb-2">
-              <button
-                onClick={() => setEvidenceOpen((o) => !o)}
-                aria-expanded={evidenceOpen}
-                className="cursor-pointer uppercase lg:pointer-events-none"
-              >
-                {t.evidence} ({evidence.length})
-                <span className="lg:hidden"> {evidenceOpen ? "−" : "+"}</span>
-                {unseen.length > 0 && <span className="text-stamp lg:hidden"> · {t.newEvidence}</span>}
-              </button>
-            </h2>
-            <ul className={`divide-y divide-rule border-y border-rule ${evidenceOpen ? "" : "max-lg:hidden"}`}>
-              {evidence.map((e) => (
-                <li key={e.id}>
-                  <button
-                    onClick={() => {
-                      setReading(e.id);
-                      markSeen(e.id);
-                    }}
-                    className="flex w-full cursor-pointer items-baseline gap-2 py-2 text-left text-sm hover:text-stamp"
-                  >
-                    <span className="flex-1">{e.title[lang]}</span>
-                    {unseen.includes(e.id) && <span className="label text-stamp!">{t.newEvidence}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-x-8 gap-y-5 px-4 pt-6 pb-16 lg:grid-cols-[250px_1fr]">
+        <aside className="lg:pt-11">
+          <h2 className="label on-desk mb-3">
+            <button
+              onClick={() => setEvidenceOpen((o) => !o)}
+              aria-expanded={evidenceOpen}
+              className="cursor-pointer uppercase lg:pointer-events-none"
+            >
+              {t.evidence} ({evidence.length})
+              <span className="lg:hidden"> {evidenceOpen ? "−" : "+"}</span>
+              {unseen.length > 0 && <span className="lg:hidden"> · {t.newEvidence}</span>}
+            </button>
+          </h2>
+          <ul className={`space-y-3.5 ${evidenceOpen ? "" : "max-lg:hidden"}`}>
+            {evidence.map((e) => (
+              <li key={e.id}>
+                <DocSlip
+                  evidence={e}
+                  lang={lang}
+                  fresh={unseen.includes(e.id)}
+                  onOpen={() => {
+                    setReading(e.id);
+                    markSeen(e.id);
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
         </aside>
 
-        <main className="flex min-h-[70vh] flex-col border border-rule bg-paper shadow-[0_1px_0_var(--rule),0_12px_30px_-18px_rgba(0,0,0,0.35)]">
-          <SuspectHeader suspect={suspect} lang={lang} />
-          <Transcript
-            lang={lang}
-            suspect={suspect}
-            played={played.filter((p) => p.suspectId === suspect.id)}
-            pending={pending?.suspectId === suspect.id ? pending : null}
-            pendingTime={clockAt(state.questionsUsed)}
-            freshIndex={freshIndex}
-          />
+        <div>
+          <Tabs lang={lang} active={suspect.id} onPick={setSuspectId} />
+          <main className="manila relative p-3 sm:p-5">
+            <IndexCard suspect={suspect} lang={lang} statements={suspectTurns.length} changedStory={changedStory} />
 
-          <form
-            className="border-t border-rule p-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send();
-            }}
-          >
-            {error && <p className="mb-3 text-sm text-stamp">{error}</p>}
-            {left <= 0 ? (
-              <p className="text-sm">{t.accuseForced}</p>
-            ) : (
-              <>
-                {presentingEvidence && (
-                  <div className="mb-2 flex items-center gap-2 text-sm">
-                    <span className="label text-stamp!">{t.present}:</span>
-                    <span className="flex-1 truncate">{presentingEvidence.title[lang]}</span>
-                    <button type="button" onClick={() => setPresenting(null)} className="label cursor-pointer hover:text-ink">
-                      {t.cancel}
-                    </button>
-                  </div>
+            <section className="lined relative mt-4 min-h-96 pt-7 pb-6 pr-4 shadow-(--shadow) sm:pr-6">
+              <div className="mb-7 flex items-baseline justify-between gap-3 pl-16">
+                <span className="label">
+                  {t.record} · {suspect.name}
+                </span>
+                <span className="label shrink-0">
+                  {t.folio} {String(c.suspects.indexOf(suspect) + 1).padStart(3, "0")}
+                </span>
+              </div>
+
+              <Transcript
+                lang={lang}
+                suspect={suspect}
+                played={suspectTurns}
+                pending={pending?.suspectId === suspect.id ? pending : null}
+                pendingTime={clockAt(state.questionsUsed)}
+                freshIndex={freshIndex}
+              />
+
+              <form
+                className="mt-7 font-mono text-[0.84rem]"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void send();
+                }}
+              >
+                {error && (
+                  <Line time="" who="">
+                    <span className="text-stamp">{error}</span>
+                  </Line>
                 )}
-                <textarea
-                  ref={inputRef}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void send();
-                    }
-                  }}
-                  maxLength={400}
-                  rows={2}
-                  placeholder={presentingEvidence ? t.presentNote : t.placeholder}
-                  disabled={pending !== null}
-                  className="w-full resize-none border-b border-rule bg-transparent py-2 font-mono text-sm outline-none placeholder:text-ink-soft focus:border-ink"
-                />
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={pending !== null || (!presenting && draft.trim() === "")}
-                    className="cursor-pointer bg-ink px-4 py-2 font-mono text-xs uppercase tracking-widest text-paper disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {presenting ? t.present : t.ask}
-                  </button>
-                  <EvidencePicker
-                    lang={lang}
-                    evidence={evidence}
-                    label={t.present}
-                    onPick={(id) => {
-                      setPresenting(id);
-                      inputRef.current?.focus();
-                    }}
-                  />
-                </div>
-              </>
-            )}
-          </form>
-        </main>
+                {left <= 0 ? (
+                  <Line time="" who="">
+                    {t.accuseForced}
+                  </Line>
+                ) : (
+                  <>
+                    {presentingEvidence && (
+                      <Line time="" who="">
+                        <span className="hand mr-3 text-lg">
+                          {t.present}: {presentingEvidence.title[lang]}
+                        </span>
+                        <button type="button" onClick={() => setPresenting(null)} className="label cursor-pointer hover:text-ink">
+                          {t.cancel}
+                        </button>
+                      </Line>
+                    )}
+                    <Line time={pending ? "" : clockAt(state.questionsUsed)} who={t.detective}>
+                      <textarea
+                        ref={inputRef}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            void send();
+                          }
+                        }}
+                        maxLength={400}
+                        rows={2}
+                        aria-label={t.placeholder}
+                        placeholder={presentingEvidence ? t.presentNote : t.placeholder}
+                        disabled={pending !== null}
+                        className="block w-full resize-none bg-transparent leading-7 caret-stamp outline-none placeholder:text-ink-soft/70 max-sm:mt-0"
+                      />
+                    </Line>
+                    <Line time="" who="">
+                      <span className="mt-3 flex flex-wrap items-center gap-3 leading-normal">
+                        <button type="submit" disabled={pending !== null || (!presenting && draft.trim() === "")} className="ink-button">
+                          {presenting ? t.present : t.ask}
+                        </button>
+                        <EvidencePicker
+                          lang={lang}
+                          evidence={evidence}
+                          label={t.present}
+                          onPick={(id) => {
+                            setPresenting(id);
+                            inputRef.current?.focus();
+                          }}
+                        />
+                      </span>
+                    </Line>
+                  </>
+                )}
+              </form>
+            </section>
+          </main>
+        </div>
       </div>
 
       {readingEvidence && (
@@ -294,33 +304,112 @@ export function Game() {
   );
 }
 
-/** "Ernesto «Neto» Salazar" -> "Neto Salazar"; "Lucía Paredes" stays. For narrow screens. */
-function shortName(name: string): string {
-  const nick = name.match(/«(.+?)»/)?.[1];
+/** "Ernesto «Neto» Salazar" -> "Salazar". What goes on a folder tab. */
+function surname(name: string): string {
   const words = name.split(/\s+/);
-  return `${nick ?? words[0]} ${words[words.length - 1]}`;
+  return words[words.length - 1];
 }
 
-function Stat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
+/** One box per question. Used ones get struck through, like a tally on a form. */
+function Tally({ total, left, label, note }: { total: number; left: number; label: string; note: string }) {
+  const used = total - left;
   return (
-    <div className="text-right">
-      <div className="label">{label}</div>
-      <div className={`font-mono text-lg leading-tight tabular-nums ${warn ? "text-stamp" : ""}`}>{value}</div>
+    <div role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={total} aria-valuenow={left} aria-valuetext={note}>
+      <div className="label flex justify-between gap-3">
+        <span>{label}</span>
+        <span className={`whitespace-nowrap ${left <= 5 ? "text-stamp" : ""}`}>{note}</span>
+      </div>
+      <div className="mt-1 grid grid-cols-12 gap-0.75">
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className={`size-2.25 border ${i < used ? "border-ink-soft" : left <= 5 ? "border-stamp" : "border-ink/60"}`}
+            style={
+              i < used
+                ? { background: "linear-gradient(to top right, transparent 44%, var(--ink) 44% 58%, transparent 58%)" }
+                : undefined
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-function SuspectHeader({ suspect, lang }: { suspect: Suspect; lang: Lang }) {
+function Tabs({ lang, active, onPick }: { lang: Lang; active: string; onPick: (id: string) => void }) {
+  return (
+    <div className="flex gap-1 pl-3" role="tablist" aria-label={strings[lang].suspects}>
+      {c.suspects.map((s, i) => {
+        const on = s.id === active;
+        return (
+          <button
+            key={s.id}
+            role="tab"
+            aria-selected={on}
+            onClick={() => onPick(s.id)}
+            className={`relative cursor-pointer rounded-t-md px-3 pt-2 pb-1.5 font-mono text-xs tracking-widest uppercase sm:px-5 ${
+              on ? "z-10 -mb-px bg-manila text-ink" : "mt-1.5 bg-manila-back text-ink/65 hover:text-ink"
+            }`}
+            style={{ backgroundImage: "var(--grain)" }}
+          >
+            <span className="text-ink-soft">{i + 1}</span> {surname(s.name)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function IndexCard({
+  suspect,
+  lang,
+  statements,
+  changedStory,
+}: {
+  suspect: Suspect;
+  lang: Lang;
+  statements: number;
+  changedStory: boolean;
+}) {
   const t = strings[lang];
   return (
-    <div className="border-b border-rule px-5 py-4">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h2 className="text-xl font-semibold">{suspect.name}</h2>
-        <span className="label">
-          {suspect.role[lang]} · {suspect.age} {t.age}
-        </span>
+    <article className="sheet relative flex gap-4 px-4 py-4 sm:rotate-[-0.4deg] sm:gap-6 sm:px-6">
+      <div className="min-w-0 flex-1 space-y-2">
+        <Field label={t.field.name}>
+          <span className="text-xl font-semibold">{suspect.name}</span>
+        </Field>
+        <div className="flex flex-wrap gap-x-8 gap-y-2">
+          <Field label={t.field.age}>
+            {suspect.age} {t.age}
+          </Field>
+          <Field label={t.field.job}>{suspect.role[lang]}</Field>
+          <Field label={t.field.statements}>
+            <span className="font-mono tabular-nums">{statements}</span>
+          </Field>
+        </div>
+        <Field label={t.field.notes}>
+          <span className="block max-w-prose text-sm leading-relaxed text-ink-soft">{suspect.summary[lang]}</span>
+        </Field>
+        {/* In the margin on wide cards; on its own line on phones so it never covers text. */}
+        {changedStory && (
+          <span className="hand block -rotate-2 text-xl sm:absolute sm:top-3 sm:right-28 sm:-rotate-6">{t.changedStory}</span>
+        )}
       </div>
-      <p className="mt-1 max-w-prose text-sm text-ink-soft">{suspect.summary[lang]}</p>
+      <div className="hidden shrink-0 flex-col items-center sm:flex">
+        <div className="border border-ink/30 px-2 pt-2 pb-1">
+          <Fingerprint seed={suspect.name} className="h-20 w-16 text-ink" />
+        </div>
+        <span className="label mt-1 text-[0.6rem]">{t.field.print}</span>
+      </div>
+    </article>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="label text-[0.6rem]">{label}</div>
+      <div className="leading-snug">{children}</div>
     </div>
   );
 }
@@ -337,27 +426,30 @@ function EvidencePicker({
   onPick: (id: string) => void;
 }) {
   return (
-    <label className="flex items-center gap-2">
-      <span className="label">{label}:</span>
+    <label className="relative inline-flex items-center">
+      <span className="sr-only">{label}</span>
       <select
         value=""
         onChange={(e) => e.target.value && onPick(e.target.value)}
-        className="max-w-[16rem] cursor-pointer border border-rule bg-paper px-2 py-1.5 text-sm"
+        className="max-w-60 cursor-pointer appearance-none border border-ink/40 bg-transparent py-2 pr-8 pl-3 font-mono text-xs tracking-widest uppercase hover:border-ink"
       >
-        <option value="">—</option>
+        <option value="">{label}</option>
         {evidence.map((e) => (
           <option key={e.id} value={e.id}>
             {e.title[lang]}
           </option>
         ))}
       </select>
+      <svg viewBox="0 0 10 6" className="pointer-events-none absolute right-3 h-1.5 w-2.5" aria-hidden="true">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      </svg>
     </label>
   );
 }
 
-function LangToggle({ lang, onLang }: { lang: Lang; onLang: (l: Lang) => void }) {
+function LangToggle({ lang, onLang, className = "" }: { lang: Lang; onLang: (l: Lang) => void; className?: string }) {
   return (
-    <button onClick={() => onLang(lang === "es" ? "en" : "es")} className="label cursor-pointer underline-offset-4 hover:underline">
+    <button onClick={() => onLang(lang === "es" ? "en" : "es")} className={`label cursor-pointer underline-offset-4 hover:underline ${className}`}>
       {strings[lang].lang}
     </button>
   );
@@ -379,39 +471,55 @@ function Briefing({
   const t = strings[lang];
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <article className="w-full max-w-xl border border-rule bg-paper px-6 py-8 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] sm:px-10 sm:py-12">
-        <div className="flex items-start justify-between gap-4">
-          <div className="label">{t.fileNo} 0522-SR</div>
-          <LangToggle lang={lang} onLang={onLang} />
+      <div className="w-full max-w-2xl">
+        <div className="flex items-end justify-between">
+          <div className="manila ml-4 rounded-t-md px-5 pt-2.5 pb-2 shadow-none">
+            <span className="sticker text-[0.65rem]">
+              {t.fileNo} 0522-SR
+            </span>
+          </div>
+          <LangToggle lang={lang} onLang={onLang} className="on-desk mb-2" />
         </div>
-        <h1 className="mt-6 text-3xl font-semibold leading-tight sm:text-4xl">{c.title[lang]}</h1>
-        <p className="mt-6 text-lg leading-relaxed">{c.briefing[lang]}</p>
-        <ul className="mt-8 space-y-3 border-t border-rule pt-6">
-          {c.suspects.map((s) => (
-            <li key={s.id} className="text-sm">
-              <span className="font-semibold">{s.name}</span>
-              <span className="text-ink-soft"> · {s.role[lang]}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-10 flex flex-wrap items-center gap-4">
-          {canResume && (
-            <button onClick={onResume} className="cursor-pointer bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-paper">
-              {t.resume}
+
+        <article className="manila relative px-5 pt-7 pb-8 sm:px-10 sm:pt-9">
+          <span className="stamp absolute top-6 right-5 rotate-[8deg] text-sm sm:right-10">{t.dateStamp}</span>
+          <div className="label pr-24 sm:pr-28">{t.agency} · Santa Rita del Monte</div>
+          <h1 className="mt-3 max-w-[80%] text-3xl leading-tight font-semibold sm:text-[2.6rem]">{c.title[lang]}</h1>
+
+          <div className="sheet relative mt-7 rotate-[-0.6deg] px-5 py-6 sm:px-7">
+            <PaperClip className="absolute -top-4 right-10 h-12 w-5" />
+            <p className="text-[1.07rem] leading-relaxed">{c.briefing[lang]}</p>
+          </div>
+
+          <h2 className="label mt-8 mb-3">{t.suspects}</h2>
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {c.suspects.map((s, i) => (
+              <li
+                key={s.id}
+                className="sheet flex items-center gap-3 px-3 py-3"
+                style={{ transform: `rotate(${(i - 1) * 0.7}deg)` }}
+              >
+                <Fingerprint seed={s.name} className="h-12 w-10 shrink-0 text-ink" />
+                <span className="min-w-0">
+                  <span className="block text-sm leading-snug font-semibold">{s.name}</span>
+                  <span className="label block text-[0.6rem] normal-case tracking-wide">{s.role[lang]}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-9 flex flex-wrap items-center gap-5">
+            {canResume && (
+              <button onClick={onResume} className="ink-button">
+                {t.resume}
+              </button>
+            )}
+            <button onClick={onStart} className={canResume ? "label cursor-pointer underline-offset-4 hover:underline" : "ink-button"}>
+              {canResume ? t.restart : t.open}
             </button>
-          )}
-          <button
-            onClick={onStart}
-            className={
-              canResume
-                ? "label cursor-pointer underline-offset-4 hover:underline"
-                : "cursor-pointer bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-paper"
-            }
-          >
-            {canResume ? t.restart : t.open}
-          </button>
-        </div>
-      </article>
+          </div>
+        </article>
+      </div>
     </main>
   );
 }
@@ -430,23 +538,23 @@ function Ending({
   const t = strings[lang];
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <article className="w-full max-w-xl border border-rule bg-paper px-6 py-8 sm:px-10 sm:py-12">
+      <article className="sheet relative w-full max-w-xl px-6 pt-8 pb-10 sm:px-10 sm:pt-10">
         <div className="flex items-start justify-between gap-4">
-          <div className="label">{t.fileNo} 0522-SR</div>
+          <div className="label">
+            {t.agency} · {t.fileNo} 0522-SR
+          </div>
           <LangToggle lang={lang} onLang={onLang} />
         </div>
-        <div className="mt-8">
-          <span className="stamp text-base">{t.verdict[verdict]}</span>
+        <h1 className="mt-4 text-2xl font-semibold">{c.title[lang]}</h1>
+        <div className="mt-8 mb-2 flex justify-center">
+          <span className="stamp stamp-down px-5 py-2 text-2xl sm:text-3xl">{t.verdict[verdict]}</span>
         </div>
         <div className="mt-8 space-y-4 text-lg leading-relaxed">
           {c.epilogues[verdict][lang].split("\n\n").map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>
-        <button
-          onClick={onRestart}
-          className="mt-10 cursor-pointer bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-paper"
-        >
+        <button onClick={onRestart} className="ink-button mt-10">
           {t.playAgain}
         </button>
       </article>
