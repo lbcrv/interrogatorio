@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
+/* Paper, ink and one stamp red. Nothing else. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --desk: #e4ddcd;
+  --paper: #f4efe3;
+  --ink: #1d1b17;
+  --ink-soft: #5c574c;
+  --rule: #cbc2ad;
+  --stamp: #a3261b;
+  --highlight: #ebe2c8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --desk: #12110f;
+    --paper: #1c1a17;
+    --ink: #e6dfcf;
+    --ink-soft: #9a9384;
+    --rule: #3a362f;
+    --stamp: #d9544a;
+    --highlight: #2a2620;
   }
 }
 
+@theme inline {
+  --color-desk: var(--desk);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-stamp: var(--stamp);
+  --color-highlight: var(--highlight);
+  --font-serif: var(--font-source-serif);
+  --font-mono: var(--font-plex-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-source-serif), Georgia, serif;
+}
+
+::selection {
+  background: var(--stamp);
+  color: var(--paper);
+}
+
+/* In a layer so Tailwind utilities can still override them. */
+@layer components {
+  /* Small caps label used for file headers, like a typed form field. */
+  .label {
+    font-family: var(--font-plex-mono), monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .stamp {
+    font-family: var(--font-plex-mono), monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--stamp);
+    border: 2px solid var(--stamp);
+    padding: 0.15rem 0.5rem;
+    display: inline-block;
+    transform: rotate(-2deg);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
 }

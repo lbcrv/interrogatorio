@@ -1,0 +1,88 @@
+import type { Lang, Verdict } from "@/game/types";
+
+export const strings = {
+  es: {
+    fileNo: "Expediente",
+    open: "Abrir expediente",
+    resume: "Continuar",
+    restart: "Empezar de nuevo",
+    restartConfirm: "¿Descartar este interrogatorio y empezar de nuevo?",
+    questionsLeft: "Preguntas",
+    clock: "Hora",
+    suspects: "Implicados",
+    evidence: "Pruebas",
+    newEvidence: "Nueva",
+    age: "años",
+    placeholder: "Escriba su pregunta…",
+    ask: "Preguntar",
+    present: "Mostrar prueba",
+    presentTo: (name: string) => `Mostrar a ${name}`,
+    presentNote: "Puede acompañarla con una pregunta.",
+    cancel: "Cancelar",
+    close: "Cerrar",
+    detective: "DET.",
+    waiting: "…",
+    added: (title: string) => `Se agrega al expediente: ${title}`,
+    showed: (title: string) => `[Muestra: ${title}]`,
+    emptyTranscript: (name: string) => `Sin declaraciones de ${name} todavía.`,
+    accuse: "Acusar",
+    accuseTitle: "Acusación formal",
+    accuseWho: "¿Quién se llevó la corona?",
+    accuseCite: (n: number) => `Cite hasta ${n} pruebas que lo demuestren.`,
+    accuseConfirm: "Presentar acusación",
+    accuseForced: "Se acabaron las preguntas. La procesión está por salir: tiene que acusar a alguien.",
+    verdict: { solved: "Caso resuelto", weak: "Caso sin pruebas", wrong: "Acusación equivocada" } satisfies Record<Verdict, string>,
+    playAgain: "Jugar otra vez",
+    errors: {
+      closed: "Archivo cerrado por hoy. El servicio gratuito llegó a su límite diario. Vuelva mañana, detective.",
+      generic: "La declaración no quedó registrada. Intente otra vez.",
+    },
+    lang: "English",
+  },
+  en: {
+    fileNo: "Case file",
+    open: "Open the file",
+    resume: "Continue",
+    restart: "Start over",
+    restartConfirm: "Discard this interrogation and start over?",
+    questionsLeft: "Questions",
+    clock: "Time",
+    suspects: "Persons of interest",
+    evidence: "Evidence",
+    newEvidence: "New",
+    age: "years old",
+    placeholder: "Type your question…",
+    ask: "Ask",
+    present: "Show evidence",
+    presentTo: (name: string) => `Show to ${name}`,
+    presentNote: "You can add a question with it.",
+    cancel: "Cancel",
+    close: "Close",
+    detective: "DET.",
+    waiting: "…",
+    added: (title: string) => `Added to the file: ${title}`,
+    showed: (title: string) => `[Shows: ${title}]`,
+    emptyTranscript: (name: string) => `No statements from ${name} yet.`,
+    accuse: "Accuse",
+    accuseTitle: "Formal accusation",
+    accuseWho: "Who took the crown?",
+    accuseCite: (n: number) => `Cite up to ${n} pieces of evidence that prove it.`,
+    accuseConfirm: "Make the accusation",
+    accuseForced: "You're out of questions. The procession is about to leave: you have to accuse someone.",
+    verdict: { solved: "Case closed", weak: "No case", wrong: "Wrong person" } satisfies Record<Verdict, string>,
+    playAgain: "Play again",
+    errors: {
+      closed: "The archive is closed for today. The free service hit its daily limit. Come back tomorrow, detective.",
+      generic: "The statement wasn't recorded. Try again.",
+    },
+    lang: "Español",
+  },
+} as const satisfies Record<Lang, unknown>;
+
+export type Strings = (typeof strings)[Lang];
+
+/** In-game clock: the file opens at 7:40 and each question takes three minutes. */
+export function clockAt(questionsUsed: number): string {
+  const minutes = 7 * 60 + 40 + questionsUsed * 3;
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuse commits that contain an API key. Groq keys start with gsk_, Google keys with AIza.
+if git diff --cached -U0 | grep -E '^\+' | grep -qE 'gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}'; then
+  echo "pre-commit: this commit contains what looks like an API key. Move it to .env.local." >&2
+  exit 1
+fi

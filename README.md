@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Interrogatorio
 
-## Getting Started
+A detective game where the suspects are played by a language model and everything else is not.
 
-First, run the development server:
+A small town in Latin America, the morning of its patron saint's procession. The saint's gold crown is gone from a locked case. You have three people in the rectory and 24 questions before the procession leaves. Question them, put evidence on the table, catch the contradictions, and make a formal accusation backed by proof.
 
-```bash
+Playable in Spanish and English.
+
+## How it works
+
+The model plays characters. It does not run the game.
+
+| Concern | Owner |
+| --- | --- |
+| What happened, who did it, what counts as proof | The case file, [`src/content/santa-rita.ts`](src/content/santa-rita.ts) |
+| Question budget, unlocking evidence, judging the accusation | A pure, deterministic engine, [`src/game/engine.ts`](src/game/engine.ts) |
+| Voice, evasion, lies, reluctant admissions | The model |
+| Making sure the culprit never confesses in chat | A post-generation guard, [`src/ai/guard.ts`](src/ai/guard.ts) |
+
+A few decisions follow from that split:
+
+- **Need-to-know prompts.** Each suspect's instructions contain only what that person knows. The two innocent suspects never see the solution, so no amount of prompt injection gets it out of them.
+- **Evidence is a mechanic.** Showing a specific document to a specific person is what breaks their story. The engine decides when that happens and injects the admission into the character's instructions; the model decides how it sounds.
+- **The server trusts nothing but the log.** The client sends the list of turns played so far. The server replays them through the engine to rebuild state, so a forged "I already unlocked this" is rejected.
+- **The output is screened in code.** Replies are checked against patterns the culprit must never say and against out-of-character tells ("as an AI…"). A failed draft is regenerated once; if it fails again, the character goes silent, which is in character for anyone in that room.
+- **It costs nothing to run.** It uses Groq's free tier. When the daily quota runs out, the game says the archive is closed for the day.
+
+## Running it
+
+Requires Node 22 or later and a free API key from [console.groq.com](https://console.groq.com/keys).
+
+```sh
+npm install
+cp .env.example .env.local   # then paste your key into GROQ_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+npm test        # engine, case data and guard tests
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`npm install` also points git at `.githooks/`, whose pre-commit hook refuses any commit that contains something shaped like an API key.
 
-## Learn More
+## Project layout
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  content/santa-rita.ts   the case: world, suspects, evidence, unlock rules, solution (spoilers)
+  game/                   types and the deterministic engine, with tests
+  ai/                     prompt building, the model call, the output guard
+  app/api/interrogate/    the one API route
+  ui/                     the React interface
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Next.js 16, React 19, TypeScript, Tailwind CSS 4, Vercel AI SDK 7 with the Groq provider (`openai/gpt-oss-120b` by default, configurable with `GROQ_MODEL`), Zod, Vitest.
 
-## Deploy on Vercel
+## Spoilers
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The solution is in the source. If you want to play first, don't open `src/content/`.
