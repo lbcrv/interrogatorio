@@ -4,7 +4,7 @@ A detective game where the suspects are played by a language model and everythin
 
 A small town in Latin America, the morning of its patron saint's procession. The saint's gold crown is gone from a locked case. You have three people in the rectory and 24 questions before the procession leaves. Question them, put evidence on the table, catch the contradictions, and make a formal accusation backed by proof.
 
-Playable in Spanish and English.
+Playable in Spanish and English: **[interrogatorio-five.vercel.app](https://interrogatorio-five.vercel.app)**
 
 ![The case file mid-interrogation: evidence slips on the desk, the restorer's index card, and her typed statement record](docs/screenshot.jpg)
 
