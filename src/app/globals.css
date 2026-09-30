@@ -310,6 +310,16 @@ body {
   }
 }
 
+/* A print coming up in the developer tray: washed out, then the blacks settle. */
+@keyframes develop {
+  from {
+    filter: brightness(1.9) contrast(0.45) sepia(0.35);
+  }
+  to {
+    filter: none;
+  }
+}
+
 /* A read sheet picked up off the file and set aside. */
 @keyframes leave {
   to {
@@ -361,6 +371,10 @@ body {
   }
   .anim-backdrop {
     animation: backdrop 220ms ease-out both;
+  }
+  .anim-develop {
+    animation: develop 1400ms ease-out both;
+    animation-delay: 150ms;
   }
   .anim-leave {
     animation: leave 380ms cubic-bezier(0.5, 0, 0.8, 0.4) both;

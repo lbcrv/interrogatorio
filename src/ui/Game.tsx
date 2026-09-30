@@ -10,6 +10,7 @@ import { DocSlip, PaperClip, type PagePoint } from "./Doc";
 import { EvidenceSheet } from "./EvidenceSheet";
 import { Fingerprint } from "./Fingerprint";
 import { Mark } from "./Mark";
+import { Mugshot } from "./Mugshot";
 import { Memo, memoRead } from "./Memo";
 import { afterMotion, delay } from "./motion";
 import { play, playAt } from "./sound";
@@ -306,6 +307,9 @@ export function Game() {
                 {t.dropHint(suspect.name)}
               </span>
             )}
+            {/* On wide screens the booking photo stands beside the card and the record. */}
+            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_210px] lg:gap-5">
+            <div className="min-w-0">
             {/* Keyed by suspect so a new card and record are laid down when the tab changes. */}
             <IndexCard key={`card-${suspect.id}`} suspect={suspect} lang={lang} statements={suspectTurns.length} changedStory={changedStory} />
 
@@ -397,6 +401,13 @@ export function Game() {
                 )}
               </form>
             </section>
+            </div>
+            <div className="hidden lg:block">
+              <div className="sticky top-28">
+                <Mugshot key={`photo-${suspect.id}`} suspect={suspect} index={c.suspects.indexOf(suspect)} className="anim-drop rotate-[1.5deg]" />
+              </div>
+            </div>
+            </div>
           </main>
         </div>
       </div>
@@ -534,7 +545,8 @@ function IndexCard({
           </span>
         )}
       </div>
-      <div className="hidden shrink-0 flex-col items-center sm:flex">
+      <Mugshot suspect={suspect} index={c.suspects.indexOf(suspect)} caption={false} className="w-24 shrink-0 -rotate-2 self-start sm:w-32 lg:hidden" />
+      <div className="hidden shrink-0 flex-col items-center lg:flex">
         <div className="border border-ink/30 px-2 pt-2 pb-1">
           <Fingerprint seed={suspect.name} inked className="h-20 w-16 text-ink" />
         </div>
