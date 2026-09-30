@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { interrogate, QuotaExhaustedError } from "@/ai/interrogate";
+import { BusyError, interrogate, QuotaExhaustedError } from "@/ai/interrogate";
+import { PlayerLimit, playerKey, QUESTIONS_PER_PLAYER_PER_DAY } from "@/ai/playerLimit";
 import { santaRita } from "@/content/santa-rita";
 import { MAX_QUESTION_LENGTH, replay, validateTurn } from "@/game/engine";
 
@@ -16,6 +17,8 @@ const body = z.object({
   next: turnInput,
 });
 
+const limit = new PlayerLimit(QUESTIONS_PER_PLAYER_PER_DAY);
+
 export async function POST(req: Request) {
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "bad-request" }, { status: 400 });
@@ -29,11 +32,16 @@ export async function POST(req: Request) {
   }
   if (reason) return Response.json({ error: reason }, { status: 422 });
 
+  const player = playerKey(req);
+  if (!limit.take(player)) return Response.json({ error: "limit" }, { status: 429 });
+
   try {
     const { reply, rejected } = await interrogate(santaRita, lang, history, next);
     if (rejected > 0) console.warn(`[guard] rejected ${rejected} draft(s) for ${next.suspectId}`);
     return Response.json({ reply });
   } catch (err) {
+    limit.refund(player);
+    if (err instanceof BusyError) return Response.json({ error: "busy" }, { status: 503 });
     if (err instanceof QuotaExhaustedError) return Response.json({ error: "closed" }, { status: 503 });
     console.error(err);
     return Response.json({ error: "model-error" }, { status: 502 });

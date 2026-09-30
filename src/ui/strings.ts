@@ -35,6 +35,8 @@ export const strings = {
     playAgain: "Jugar otra vez",
     errors: {
       closed: "Archivo cerrado por hoy. El servicio gratuito llegó a su límite diario. Vuelva mañana, detective.",
+      busy: "Hay otros detectives en la casa cural. Espere un minuto y vuelva a preguntar.",
+      limit: "Por hoy ya hizo todas las preguntas que el archivo permite. Vuelva mañana, detective.",
       generic: "La declaración no quedó registrada. Intente otra vez.",
     },
     lang: "English",
@@ -83,6 +85,8 @@ export const strings = {
     playAgain: "Play again",
     errors: {
       closed: "The archive is closed for today. The free service hit its daily limit. Come back tomorrow, detective.",
+      busy: "Other detectives are in the rectory. Wait a minute and ask again.",
+      limit: "You've asked all the questions the archive allows for today. Come back tomorrow, detective.",
       generic: "The statement wasn't recorded. Try again.",
     },
     lang: "Español",

@@ -25,7 +25,7 @@ A few decisions follow from that split:
 - **Evidence is a mechanic.** Showing a specific document to a specific person is what breaks their story. The engine decides when that happens and injects the admission into the character's instructions; the model decides how it sounds.
 - **The server trusts nothing but the log.** The client sends the list of turns played so far. The server replays them through the engine to rebuild state, so a forged "I already unlocked this" is rejected.
 - **The output is screened in code.** Replies are checked against patterns the culprit must never say and against out-of-character tells ("as an AI…"). A failed draft is regenerated once; if it fails again, the character goes silent, which is in character for anyone in that room.
-- **It costs nothing to run.** It uses Groq's free tier. When the daily quota runs out, the game says the archive is closed for the day.
+- **It costs nothing to run.** It uses Groq's free tier. Each visitor gets 30 questions a day so one person can't spend everyone's quota. When the per-minute limit is full the game asks you to wait a minute; when the daily quota runs out, it says the archive is closed for the day.
 
 ## Running it
 

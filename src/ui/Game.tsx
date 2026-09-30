@@ -83,7 +83,8 @@ export function Game() {
       });
       const data = (await res.json()) as { reply?: string; error?: string };
       if (!res.ok || !data.reply) {
-        setError(data.error === "closed" ? t.errors.closed : t.errors.generic);
+        const e = data.error;
+        setError(e === "closed" || e === "busy" || e === "limit" ? t.errors[e] : t.errors.generic);
         return;
       }
       setFreshIndex(game.turns.length);
